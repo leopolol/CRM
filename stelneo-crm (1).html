@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stelneo CRM</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    /* Stelneo brand */
+    --navy:        #002f4b;
+    --navy-dark:   #001e30;
+    --navy-mid:    #003d61;
+    --navy-light:  #e8f2f8;
+    --navy-xlight: #f0f6fa;
+    --yellow:      #F6C13C;
+    --yellow-dark: #d4a020;
+    --yellow-dim:  rgba(246,193,60,0.18);
+    --beige:       #F4EEDF;
+    --beige-dark:  #e6ddc8;
+    --beige-mid:   #ede5d2;
+
+    /* Backgrounds */
+    --bg:   var(--beige);
+    --bg2:  #ffffff;
+    --bg3:  var(--beige-mid);
+    --bg4:  var(--beige-dark);
+
+    /* Borders */
+    --border:  rgba(0,47,75,0.10);
+    --border2: rgba(0,47,75,0.20);
+
+    /* Text */
+    --text:  #001e30;
+    --text2: #3a5a72;
+    --text3: #7a9bb0;
+
+    /* Accents */
+    --accent:     var(--navy);
+    --accent2:    var(--navy-mid);
+    --accent-dim: var(--navy-light);
+
+    /* Semantic */
+    --green:     #1a8a5a;
+    --green-dim: rgba(26,138,90,0.12);
+    --amber:     #c47f00;
+    --amber-dim: rgba(196,127,0,0.12);
+    --red:       #c0392b;
+    --red-dim:   rgba(192,57,43,0.10);
+    --blue:      var(--navy-mid);
+    --blue-dim:  var(--navy-light);
+
+    --font: 'Inter', system-ui, sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--navy);
+    border-right: none;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 12px;
+    gap: 4px;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+    padding: 4px 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    margin-bottom: 6px;
+  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
+  .nav-item.active { background: var(--yellow); color: var(--navy-dark); font-weight: 600; }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .sidebar-section {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 12px 10px 4px;
+  }
+
+  /* MAIN */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; color: var(--navy); }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg4); border-color: var(--border2); }
+  .btn-primary { background: var(--navy); border-color: var(--navy); color: white; }
+  .btn-primary:hover { background: var(--navy-mid); border-color: var(--navy-mid); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* CONTENT */
+  .content { padding: 28px; flex: 1; }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .search-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    flex: 1;
+    min-width: 180px;
+    max-width: 300px;
+    transition: border-color 0.15s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text3); }
+
+  .filter-chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-chip:hover { border-color: var(--border2); color: var(--text); }
+  .filter-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .stat-green { color: var(--green); }
+  .stat-amber { color: var(--amber); }
+  .stat-blue { color: var(--blue); }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--bg3); }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th:hover { color: var(--text2); }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  tr { cursor: pointer; }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+  .badge-todo { background: var(--bg4); color: var(--text2); }
+  .badge-todo .badge-dot { background: var(--text3); }
+  .badge-sent { background: var(--blue-dim); color: var(--blue); }
+  .badge-sent .badge-dot { background: var(--blue); }
+  .badge-followup { background: var(--amber-dim); color: var(--amber); }
+  .badge-followup .badge-dot { background: var(--amber); }
+  .badge-replied { background: var(--green-dim); color: var(--green); }
+  .badge-replied .badge-dot { background: var(--green); }
+  .badge-pilote { background: var(--yellow-dim); color: var(--yellow-dark); }
+  .badge-pilote .badge-dot { background: var(--yellow-dark); }
+  .badge-noreply { background: var(--red-dim); color: var(--red); }
+  .badge-noreply .badge-dot { background: var(--red); }
+
+  .sector-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sector-elec { background: rgba(0,47,75,0.10); color: var(--navy-mid); }
+  .sector-med  { background: rgba(26,138,90,0.12); color: var(--green); }
+  .sector-aero { background: var(--yellow-dim); color: var(--yellow-dark); }
+
+  .company-cell { display: flex; flex-direction: column; gap: 2px; }
+  .company-name { font-weight: 600; color: var(--text); }
+  .company-sub { font-size: 11px; color: var(--text3); }
+
+  .contact-cell { font-size: 12px; color: var(--text2); }
+
+  .day-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .day-badge.urgent { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+
+  /* SIDE PANEL */
+  .panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    display: none;
+  }
+  .panel-overlay.open { display: block; }
+
+  .side-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 520px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+  .side-panel.open { transform: translateX(0); }
+
+  .panel-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .panel-header-left { flex: 1; }
+  .panel-company { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .panel-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .close-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .close-btn:hover { color: var(--text); }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* SEQUENCE TIMELINE */
+  .sequence-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .sequence-title {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .seq-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .seq-item:last-child { border-bottom: none; }
+
+  .seq-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border2);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 11px;
+  }
+  .seq-check.done { background: var(--green); border-color: var(--green); color: var(--bg); }
+  .seq-check.pending { border-color: var(--amber); }
+  .seq-check.upcoming { opacity: 0.4; }
+
+  .seq-info { flex: 1; min-width: 0; }
+  .seq-day { font-size: 11px; font-weight: 600; color: var(--text3); }
+  .seq-action { font-size: 13px; color: var(--text); font-weight: 500; }
+  .seq-date { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+  .seq-channel {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .ch-mail { background: var(--blue-dim); color: var(--blue); }
+  .ch-linkedin { background: rgba(10,102,194,0.2); color: #4f9ef7; }
+
+  /* NOTES SECTION */
+  .notes-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .notes-title {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .note-prompts {
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-prompt {
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .note-prompt:hover { background: var(--bg4); color: var(--text); }
+
+  .note-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    resize: none;
+    outline: none;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+  .note-textarea::placeholder { color: var(--text3); }
+
+  .note-save-row {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .saved-notes { padding: 0; }
+  .saved-note {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .saved-note:last-child { border-bottom: none; }
+  .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .note-ts { font-size: 10px; color: var(--text3); }
+  .note-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent2); background: var(--accent-dim); padding: 1px 6px; border-radius: 3px; }
+  .note-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* INFO GRID */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .info-item {
+    background: var(--bg3);
+    padding: 10px 14px;
+  }
+  .info-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .info-value { font-size: 13px; color: var(--text); font-weight: 500; }
+  .info-value a { color: var(--accent2); text-decoration: none; }
+  .info-value a:hover { text-decoration: underline; }
+
+  /* STATUS PICKER */
+  .status-picker {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+  .status-option {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .status-option:hover { border-color: var(--border2); }
+  .status-option.selected { font-weight: 600; }
+
+  /* MODAL ADD */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    width: 480px;
+    max-width: 95vw;
+    padding: 24px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .form-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-select { width: 100%; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* EMPTY */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* KANBAN */
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    min-height: 400px;
+    align-items: start;
+  }
+  .kanban-col {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .kanban-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .kanban-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); }
+  .kanban-count {
+    background: var(--bg4);
+    color: var(--text3);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kanban-cards { padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+  .kanban-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .kanban-card:hover { border-color: var(--border2); }
+  .kanban-card-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .kanban-card-meta { font-size: 10px; color: var(--text3); }
+
+  /* AGENDA VIEW */
+  .agenda { display: flex; flex-direction: column; gap: 12px; }
+  .agenda-date {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  .agenda-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .agenda-item:hover { border-color: var(--border2); }
+  .agenda-left { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 36px; }
+  .agenda-day-num { font-size: 20px; font-weight: 700; line-height: 1; color: var(--text); }
+  .agenda-month { font-size: 10px; color: var(--text3); text-transform: uppercase; }
+  .agenda-divider { width: 1px; height: 36px; background: var(--border2); }
+  .agenda-body { flex: 1; }
+  .agenda-action { font-size: 13px; font-weight: 600; color: var(--text); }
+  .agenda-company { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .agenda-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+  /* URGENT RIBBON */
+  .urgent-banner {
+    background: var(--yellow-dim);
+    border: 1px solid rgba(246,193,60,0.5);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .urgent-icon { font-size: 16px; }
+  .urgent-text { font-size: 13px; color: var(--yellow-dark); font-weight: 500; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* PAGE VIEWS */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo"><div class="logo-dot"></div>Stelneo CRM</div>
+  <button class="nav-item active" onclick="showPage('pipeline')" id="nav-pipeline">
+    <span class="nav-icon">⚡</span> Pipeline
+  </button>
+  <button class="nav-item" onclick="showPage('contacts')" id="nav-contacts">
+    <span class="nav-icon">◉</span> Contacts
+  </button>
+  <button class="nav-item" onclick="showPage('agenda')" id="nav-agenda">
+    <span class="nav-icon">◷</span> Agenda
+  </button>
+  <button class="nav-item" onclick="showPage('kanban')" id="nav-kanban">
+    <span class="nav-icon">▦</span> Kanban
+  </button>
+  <div class="sidebar-section">Secteurs</div>
+  <button class="nav-item" onclick="filterSector('Électronique industrielle')" id="nav-elec">
+    <span class="nav-icon" style="color:#60a5fa;">▸</span> Électronique
+  </button>
+  <button class="nav-item" onclick="filterSector('Médical')" id="nav-med">
+    <span class="nav-icon" style="color:#2dd4a0;">▸</span> Médical
+  </button>
+  <button class="nav-item" onclick="filterSector('Aéronautique')" id="nav-aero">
+    <span class="nav-icon" style="color:#f59e0b;">▸</span> Aéro / Défense
+  </button>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">⚡ Pipeline</div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" onclick="openModal()">+ Ajouter contact</button>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div class="content">
+
+    <!-- PIPELINE (liste principale) -->
+    <div class="page active" id="page-pipeline">
+      <div id="urgent-banner" class="urgent-banner">
+        <span class="urgent-icon">⚑</span>
+        <span class="urgent-text">17 mars — <strong id="urgent-count">16 relances J+6</strong> électronique industrielle à envoyer aujourd'hui</span>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total contacts</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-sub">en prospection</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Relances à faire</div>
+          <div class="stat-value stat-amber" id="stat-followup">0</div>
+          <div class="stat-sub">J+6 · J+12</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Réponses reçues</div>
+          <div class="stat-value stat-green" id="stat-replied">0</div>
+          <div class="stat-sub">taux de réponse</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pilotes</div>
+          <div class="stat-value stat-blue" id="stat-pilote">0</div>
+          <div class="stat-sub">objectif : 3</div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-input" oninput="applyFilters()">
+        <button class="filter-chip active" id="filter-all" onclick="setStatusFilter('all')">Tous</button>
+        <button class="filter-chip" id="filter-todo" onclick="setStatusFilter('todo')">À contacter</button>
+        <button class="filter-chip" id="filter-sent" onclick="setStatusFilter('sent')">J envoyé</button>
+        <button class="filter-chip" id="filter-followup" onclick="setStatusFilter('followup')">Relance J+6</button>
+        <button class="filter-chip" id="filter-replied" onclick="setStatusFilter('replied')">Répondu</button>
+        <button class="filter-chip" id="filter-pilote" onclick="setStatusFilter('pilote')">Pilote</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortBy('company')">Entreprise</th>
+              <th onclick="sortBy('sector')">Secteur</th>
+              <th>Contact</th>
+              <th onclick="sortBy('status')">Statut</th>
+              <th onclick="sortBy('nextAction')">Prochaine action</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CONTACTS (même données, autre vue) -->
+    <div class="page" id="page-contacts">
+      <div class="filters">
+        <input type="text" class="search-box" placeholder="🔍  Rechercher..." oninput="applyFilters()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Entreprise</th>
+              <th>Secteur</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Site</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody2"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="page" id="page-agenda">
+      <div class="agenda" id="agenda-list"></div>
+    </div>
+
+    <!-- KANBAN -->
+    <div class="page" id="page-kanban">
+      <div class="kanban" id="kanban-board"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SIDE PANEL (fiche contact) -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="side-panel" id="side-panel">
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-company" id="panel-company-name">—</div>
+      <div class="panel-meta" id="panel-meta"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()">✏ Modifier</button>
+      <button class="close-btn" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="panel-body">
+
+    <!-- FORMULAIRE EDITION (caché par défaut) -->
+    <div id="edit-form-block" style="display:none;">
+      <div class="section-label">Modifier la fiche</div>
+      <div class="notes-block" style="padding:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="grid-column:1/-1;" class="form-row" style="margin:0">
+            <label class="form-label">Entreprise</label>
+            <input class="form-input" id="edit-company" type="text">
+          </div>
+          <div style="grid-column:1/-1;" class="form-row">
+            <label class="form-label">Spécialité</label>
+            <input class="form-input" id="edit-specialite" type="text">
+          </div>
+          <div>
+            <label class="form-label">Secteur</label>
+            <select class="form-input form-select" id="edit-sector">
+              <option value="Électronique industrielle">Électronique industrielle</option>
+              <option value="Médical">Médical</option>
+              <option value="Aéronautique">Aéronautique / Défense</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Localisation</label>
+            <input class="form-input" id="edit-location" type="text">
+          </div>
+          <div>
+            <label class="form-label">Interlocuteur</label>
+            <input class="form-input" id="edit-contact" type="text" placeholder="ex: Florence Bertrand">
+          </div>
+          <div>
+            <label class="form-label">Téléphone</label>
+            <input class="form-input" id="edit-phone" type="text" placeholder="ex: +33 6 ...">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label class="form-label">Email</label>
+            <input class="form-input" id="edit-email" type="text" placeholder="ex: contact@entreprise.com">
+          </div>
+          <div>
+            <label class="form-label">Site web</label>
+            <input class="form-input" id="edit-site" type="text" placeholder="ex: entreprise.fr">
+          </div>
+          <div>
+            <label class="form-label">Date J</label>
+            <input class="form-input" id="edit-dateJ" type="date">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="btn btn-sm" onclick="cancelEdit()">Annuler</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEdit()">💾 Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Infos -->
+    <div id="view-info-block">
+      <div class="section-label">Informations</div>
+      <div class="info-grid" id="panel-info-grid"></div>
+    </div>
+
+    <!-- Statut -->
+    <div>
+      <div class="section-label">Statut</div>
+      <div class="notes-block">
+        <div class="status-picker" id="panel-status-picker"></div>
+      </div>
+    </div>
+
+    <!-- Séquence 12 jours -->
+    <div>
+      <div class="section-label">Séquence 12 jours</div>
+      <div class="sequence-block" id="panel-sequence"></div>
+    </div>
+
+    <!-- Notes guidées -->
+    <div>
+      <div class="section-label">Notes</div>
+      <div class="notes-block">
+        <div class="notes-title">
+          <span>Ajouter une note</span>
+        </div>
+        <div class="note-prompts">
+          <button class="note-prompt" onclick="insertPrompt('Réponse reçue : ')">📨 Réponse</button>
+          <button class="note-prompt" onclick="insertPrompt('Objection : ')">⚡ Objection</button>
+          <button class="note-prompt" onclick="insertPrompt('RDV planifié le ')">📅 RDV</button>
+          <button class="note-prompt" onclick="insertPrompt('Intérêt pour : ')">✓ Intérêt</button>
+          <button class="note-prompt" onclick="insertPrompt('Frein identifié : ')">⚠ Frein</button>
+          <button class="note-prompt" onclick="insertPrompt('Contact recommandé : ')">👤 Reco</button>
+          <button class="note-prompt" onclick="insertPrompt('Secteur spécifique : ')">◎ Secteur</button>
+          <button class="note-prompt" onclick="insertPrompt('À relancer le ')">🔁 Rappel</button>
+        </div>
+        <textarea class="note-textarea" id="note-input" placeholder="Tape ou choisis un modèle ci-dessus..."></textarea>
+        <div class="note-save-row">
+          <button class="btn btn-primary btn-sm" onclick="saveNote()">Enregistrer</button>
+        </div>
+        <div class="saved-notes" id="saved-notes-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL AJOUT CONTACT -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Nouveau contact</div>
+    <div class="form-row">
+      <label class="form-label">Entreprise *</label>
+      <input type="text" class="form-input" id="f-company" placeholder="ex: TDM Ingénierie">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Spécialité</label>
+      <input type="text" class="form-input" id="f-specialite" placeholder="ex: Électronique embarquée Rafale">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Secteur *</label>
+      <select class="form-input form-select" id="f-sector">
+        <option value="Électronique industrielle">Électronique industrielle</option>
+        <option value="Médical">Médical</option>
+        <option value="Aéronautique">Aéronautique / Défense</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Localisation</label>
+      <input type="text" class="form-input" id="f-location" placeholder="ex: Mérignac (Gironde)">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Contact / Interlocuteur</label>
+      <input type="text" class="form-input" id="f-contact" placeholder="ex: Florence Bertrand (Dir. Ops)">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Email</label>
+      <input type="text" class="form-input" id="f-email" placeholder="ex: contact@entreprise.com">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Site web</label>
+      <input type="text" class="form-input" id="f-site" placeholder="ex: entreprise.fr">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date J (premier contact)</label>
+      <input type="date" class="form-input" id="f-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="addContact()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const STATUSES = [
+  { key: 'todo',     label: 'À contacter',  class: 'badge-todo' },
+  { key: 'sent',     label: 'J envoyé',      class: 'badge-sent' },
+  { key: 'followup', label: 'Relance J+6',   class: 'badge-followup' },
+  { key: 'replied',  label: 'Répondu ✓',     class: 'badge-replied' },
+  { key: 'pilote',   label: 'Pilote 🎯',     class: 'badge-pilote' },
+  { key: 'noreply',  label: 'Sans réponse',  class: 'badge-noreply' },
+];
+
+const SEQ = [
+  { day: 'J',   label: 'Premier mail personnalisé', channel: 'mail' },
+  { day: 'J',   label: 'Visite silencieuse LinkedIn', channel: 'linkedin' },
+  { day: 'J+2', label: 'Demande de connexion (sans note)', channel: 'linkedin' },
+  { day: 'J+4', label: 'Message LinkedIn (si connecté)', channel: 'linkedin' },
+  { day: 'J+6', label: 'Relance mail — angle RSE', channel: 'mail' },
+  { day: 'J+10',label: 'Dernier message LinkedIn', channel: 'linkedin' },
+  { day: 'J+12',label: 'Mail de clôture — porte ouverte', channel: 'mail' },
+];
+
+const SECTOR_CLASS = {
+  'Électronique industrielle': 'sector-elec',
+  'Médical': 'sector-med',
+  'Aéronautique': 'sector-aero',
+  'Aéronautique / Défense': 'sector-aero',
+};
+
+const today = new Date('2025-03-13');
+
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return Math.floor((today - d) / 86400000);
+}
+
+// Initial data
+let contacts = [
+  // Électronique Bordeaux
+  { id: 1, company: 'ISEM', specialite: 'Réparation électronique industrielle depuis 1989', sector: 'Électronique industrielle', location: 'Mérignac', contact: '', email: 'isem.fr', site: 'isem.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 2, company: 'CMD Électronique', specialite: 'Réparation cartes industrielles au niveau composants', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: 'Site web', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 3, company: 'SERMA Technologies', specialite: 'Expertise, analyse, test composants électroniques', sector: 'Électronique industrielle', location: 'Mérignac', contact: '', email: '', site: 'serma.com', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 4, company: 'Sogelec', specialite: 'Services électronique industrielle et conception', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: '', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 5, company: 'Radio Sport', specialite: 'Réparation équipements de contrôle électronique', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: '', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 6, company: 'Eurocomposant', specialite: 'Distributeur composants électroniques — 1200 clients', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: 'eurocomposant.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 7, company: 'FEDD', specialite: 'Fabricant cartes électroniques depuis 1980', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: 'fedd.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 8, company: 'Aquitaine Électronique', specialite: 'Équipements électroniques, harnais sur mesure', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: '', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 9, company: 'Microniks Europe', specialite: 'Réparation cartes + matériel optique', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: 'microniks.eu', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 10, company: 'BMS Circuits', specialite: 'Connecteurs, circuits, télécom — 40 ans', sector: 'Électronique industrielle', location: 'Bordeaux', contact: '', email: '', site: 'bms-circuits.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 11, company: 'Innotronic', specialite: 'Réparation cartes industrielles multi-secteurs', sector: 'Électronique industrielle', location: '', contact: '', email: '', site: 'innotronic.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 12, company: 'ARCT Électronique', specialite: 'Réparation cartes CNC, grues, robots', sector: 'Électronique industrielle', location: 'Artigues', contact: '', email: 'contact@arct-electronique.com', site: '', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 13, company: 'ADL Electronic', specialite: 'Maintenance électronique — servomoteurs', sector: 'Électronique industrielle', location: 'Pau / Angoulême', contact: '', email: '', site: 'adl-electronic.fr', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 14, company: 'MID-Électronique', specialite: 'Expert MCO, réparation urgente France/étranger', sector: 'Électronique industrielle', location: 'Semoy', contact: '', email: '', site: 'mid-electronique.com', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 15, company: 'SEIA Électronique', specialite: 'Réparations urgentes 24h, cartes industrielles', sector: 'Électronique industrielle', location: '', contact: '', email: 'contact@seia-electronique.fr', site: '', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  { id: 16, company: 'Industechnic', specialite: 'Maintenance électronique multi-sites Europe', sector: 'Électronique industrielle', location: '', contact: '', email: '', site: 'industechnic.com', status: 'followup', dateJ: '2025-03-10', notes: [] },
+  // Médical
+  { id: 17, company: 'ALTEK Medical', specialite: 'Maintenance instruments chirurgicaux — 850 établissements', sector: 'Médical', location: 'National', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 18, company: 'ATPR', specialite: 'Maintenance équipements médicaux — ISO 13485', sector: 'Médical', location: 'Yvrac (Gironde)', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 19, company: 'Dessillons & Dutrillaux', specialite: 'Fabricant matériel diagnostic/chirurgie ortho', sector: 'Médical', location: 'Castelculier (47)', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 20, company: 'TEMSEGA', specialite: 'Fabricant appareils diagnostic portables', sector: 'Médical', location: 'Pessac (Gironde)', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 21, company: 'ALUMED', specialite: 'Fabricant matériel médical — logistique export', sector: 'Médical', location: 'Nouvelle-Aquitaine', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 22, company: 'CIDELEC', specialite: 'Fabricant polygraphes portables — 66g à 135g', sector: 'Médical', location: 'Angers', contact: '', email: 'service.commercial@cidelec.net', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 23, company: 'ELECTRO-STANDARD', specialite: 'Maintenance électronique médicale — 4 sites', sector: 'Médical', location: 'Rennes', contact: '', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 24, company: 'SONOSCANNER', specialite: 'Fabricant échographes portables — 54 employés', sector: 'Médical', location: 'Ivry-sur-Seine', contact: 'Patrick Baranczak (SAV)', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  // Aéro/défense
+  { id: 25, company: 'TDM Ingénierie', specialite: 'Électronique embarquée Rafale/Leclerc — EN9100', sector: 'Aéronautique', location: 'Mérignac (10 min)', contact: '', email: 'contact@tdm-ing.com', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 26, company: 'ASERTI Electronic', specialite: 'Réparation électronique — Club Durabilité', sector: 'Aéronautique', location: 'Toulouse', contact: 'Florence Bertrand (Dir. Ops)', email: '', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  { id: 27, company: 'SICAP Électronique', specialite: 'Sous-traitance électronique aéro/défense EN9100', sector: 'Aéronautique', location: 'Normandie', contact: '', email: 'sicap@sicap-electronique.com', site: '', status: 'sent', dateJ: '2025-03-12', notes: [] },
+  // À contacter
+  { id: 28, company: 'HD Automatisme', specialite: '25 ans maintenance électronique, traçabilité individuelle', sector: 'Électronique industrielle', location: 'Toulouse', contact: '', email: '', site: '', status: 'todo', dateJ: '', notes: [] },
+  { id: 29, company: 'AUREA Technology', specialite: 'Instruments mesures optiques ultra-compacts', sector: 'Aéronautique', location: '', contact: '', email: '', site: '', status: 'todo', dateJ: '', notes: [] },
+  { id: 30, company: 'Interface Concept', specialite: 'Réseaux embarqués critiques aéro/défense, international', sector: 'Aéronautique', location: 'Quimper', contact: '', email: '', site: '', status: 'todo', dateJ: '', notes: [] },
+  { id: 31, company: 'COVATECH', specialite: 'R&D électronique embarquée, produits mécatroniques', sector: 'Électronique industrielle', location: 'Aquitaine', contact: '', email: '', site: '', status: 'todo', dateJ: '', notes: [] },
+  { id: 32, company: 'AAS — Aéro et Systèmes', specialite: 'Triple secteur, câblage électronique sur mesure', sector: 'Aéronautique', location: '', contact: '', email: '', site: '', status: 'todo', dateJ: '', notes: [] },
+];
+
+let nextId = 33;
+let currentFilter = 'all';
+let currentSector = null;
+let selectedContact = null;
+let sortKey = null;
+let sortAsc = true;
+
+// ─── RENDER ─────────────────────────────────────────────────────────────────
+
+function getFiltered() {
+  const q = (document.getElementById('search-input') || {}).value?.toLowerCase() || '';
+  return contacts.filter(c => {
+    if (currentSector && c.sector !== currentSector) return false;
+    if (currentFilter !== 'all' && c.status !== currentFilter) return false;
+    if (q && !c.company.toLowerCase().includes(q) && !c.sector.toLowerCase().includes(q) && !c.specialite.toLowerCase().includes(q) && !c.location.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function getNextActionLabel(c) {
+  if (!c.dateJ) return { label: 'Préparer mail J', urgent: false };
+  const days = daysSince(c.dateJ);
+  if (days === null) return { label: '—', urgent: false };
+  if (c.status === 'sent' && days >= 5) return { label: 'Relance J+6 due', urgent: true };
+  if (c.status === 'followup' && days >= 11) return { label: 'Mail clôture J+12', urgent: true };
+  if (c.status === 'sent') return { label: `Relance J+6 (J+${6 - days})`, urgent: false };
+  if (c.status === 'followup') return { label: `Clôture J+12 (J+${12 - days})`, urgent: false };
+  if (c.status === 'replied') return { label: 'RDV à planifier', urgent: false };
+  if (c.status === 'pilote') return { label: 'Pilote en cours ✓', urgent: false };
+  if (c.status === 'noreply') return { label: 'Archivé', urgent: false };
+  return { label: 'Envoyer J', urgent: false };
+}
+
+function renderTable() {
+  const tbody = document.getElementById('contacts-tbody');
+  if (!tbody) return;
+  const data = getFiltered();
+
+  updateStats();
+
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">Aucun contact trouvé</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(c => {
+    const st = STATUSES.find(s => s.key === c.status) || STATUSES[0];
+    const sc = SECTOR_CLASS[c.sector] || 'sector-elec';
+    const na = getNextActionLabel(c);
+    const noteCount = c.notes.length;
+    return `
+    <tr onclick="openPanel(${c.id})">
+      <td>
+        <div class="company-cell">
+          <span class="company-name">${c.company}</span>
+          <span class="company-sub">${c.specialite || ''}</span>
+        </div>
+      </td>
+      <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
+      <td class="contact-cell">${c.contact || c.email || '—'}</td>
+      <td><span class="badge ${st.class}"><span class="badge-dot"></span>${st.label}</span></td>
+      <td><span class="day-badge ${na.urgent ? 'urgent' : ''}">${na.label}</span></td>
+      <td style="color:var(--text3);font-size:12px;">${noteCount > 0 ? '📝 ' + noteCount : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  renderTable2();
+}
+
+function renderTable2() {
+  const tbody2 = document.getElementById('contacts-tbody2');
+  if (!tbody2) return;
+  const data = getFiltered();
+  tbody2.innerHTML = data.map(c => {
+    const st = STATUSES.find(s => s.key === c.status) || STATUSES[0];
+    const sc = SECTOR_CLASS[c.sector] || 'sector-elec';
+    return `
+    <tr onclick="openPanel(${c.id})">
+      <td><span class="company-name">${c.company}</span></td>
+      <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
+      <td class="contact-cell">${c.contact || '—'}</td>
+      <td class="contact-cell">${c.email || '—'}</td>
+      <td class="contact-cell">${c.site ? `<a href="https://${c.site}" target="_blank" onclick="event.stopPropagation()">${c.site}</a>` : '—'}</td>
+      <td><span class="badge ${st.class}"><span class="badge-dot"></span>${st.label}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = contacts.length;
+  document.getElementById('stat-followup').textContent = contacts.filter(c => c.status === 'followup').length;
+  document.getElementById('stat-replied').textContent = contacts.filter(c => c.status === 'replied' || c.status === 'pilote').length;
+  document.getElementById('stat-pilote').textContent = contacts.filter(c => c.status === 'pilote').length;
+}
+
+// ─── KANBAN ─────────────────────────────────────────────────────────────────
+
+function renderKanban() {
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = STATUSES.map(s => {
+    const cards = contacts.filter(c => c.status === s.key);
+    return `
+    <div class="kanban-col">
+      <div class="kanban-header">
+        <span class="kanban-title">${s.label}</span>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      <div class="kanban-cards">
+        ${cards.length === 0 ? '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px 0;">Vide</div>' : ''}
+        ${cards.map(c => `
+          <div class="kanban-card" onclick="openPanel(${c.id})">
+            <div class="kanban-card-name">${c.company}</div>
+            <div class="kanban-card-meta">${c.sector.split(' ')[0]} · ${c.location || '?'}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── AGENDA ─────────────────────────────────────────────────────────────────
+
+function renderAgenda() {
+  const list = document.getElementById('agenda-list');
+  const actions = [];
+
+  contacts.forEach(c => {
+    if (!c.dateJ) {
+      if (c.status === 'todo') {
+        actions.push({ date: today, label: 'Envoyer J — Premier mail', company: c.company, id: c.id, urgent: false, channel: 'mail' });
+      }
+      return;
+    }
+    const j = new Date(c.dateJ);
+    const points = [
+      { day: 0, label: 'Envoyer J — Premier mail', channel: 'mail' },
+      { day: 0, label: 'Visite LinkedIn silencieuse', channel: 'linkedin' },
+      { day: 2, label: 'Demande connexion LinkedIn', channel: 'linkedin' },
+      { day: 4, label: 'Message LinkedIn si connecté', channel: 'linkedin' },
+      { day: 6, label: 'Relance mail J+6 (RSE)', channel: 'mail' },
+      { day: 10, label: 'Dernier message LinkedIn', channel: 'linkedin' },
+      { day: 12, label: 'Mail de clôture J+12', channel: 'mail' },
+    ];
+    points.forEach(p => {
+      const d = addDays(j, p.day);
+      const dSince = Math.floor((today - d) / 86400000);
+      if (dSince >= -7 && dSince <= 14) {
+        actions.push({ date: d, label: p.label, company: c.company, id: c.id, urgent: dSince >= 0 && dSince <= 2, channel: p.channel });
+      }
+    });
+  });
+
+  actions.sort((a, b) => a.date - b.date);
+
+  // Group by date
+  const groups = {};
+  actions.forEach(a => {
+    const key = a.date.toISOString().slice(0, 10);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+
+  list.innerHTML = Object.entries(groups).map(([key, items]) => {
+    const d = new Date(key);
+    const isPast = d < today;
+    const isToday = d.toDateString() === today.toDateString();
+    const label = isToday ? 'Aujourd\'hui' : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `
+      <div class="agenda-date" style="${isToday ? 'color:var(--amber);border-color:rgba(245,158,11,0.3)' : isPast ? 'opacity:0.5' : ''}">${label}${isToday ? ' ← AUJOURD\'HUI' : ''}</div>
+      ${items.map(a => `
+        <div class="agenda-item" onclick="openPanel(${a.id})" style="${isPast ? 'opacity:0.6' : ''}">
+          <div class="agenda-left">
+            <div class="agenda-day-num">${d.getDate()}</div>
+            <div class="agenda-month">${d.toLocaleDateString('fr-FR', {month:'short'})}</div>
+          </div>
+          <div class="agenda-divider"></div>
+          <div class="agenda-body">
+            <div class="agenda-action">${a.label}</div>
+            <div class="agenda-company">${a.company}</div>
+          </div>
+          <div class="agenda-right">
+            <span class="seq-channel ${a.channel === 'mail' ? 'ch-mail' : 'ch-linkedin'}">${a.channel === 'mail' ? 'Mail' : 'LinkedIn'}</span>
+            ${a.urgent ? '<span style="font-size:10px;color:var(--amber);font-weight:600;">ACTION</span>' : ''}
+          </div>
+        </div>`).join('')}`;
+  }).join('');
+}
+
+// ─── PANEL ──────────────────────────────────────────────────────────────────
+
+function openPanel(id) {
+  selectedContact = contacts.find(c => c.id === id);
+  if (!selectedContact) return;
+  const c = selectedContact;
+
+  document.getElementById('panel-company-name').textContent = c.company;
+
+  // Meta badges
+  const sc = SECTOR_CLASS[c.sector] || 'sector-elec';
+  document.getElementById('panel-meta').innerHTML = `
+    <span class="sector-badge ${sc}">${c.sector}</span>
+    <span style="color:var(--text3);font-size:12px;">${c.location || ''}</span>`;
+
+  // Info grid
+  const days = daysSince(c.dateJ);
+  document.getElementById('panel-info-grid').innerHTML = `
+    <div class="info-item" style="grid-column:1/-1"><div class="info-label">Spécialité</div><div class="info-value">${c.specialite || '—'}</div></div>
+    <div class="info-item"><div class="info-label">Localisation</div><div class="info-value">${c.location || '—'}</div></div>
+    <div class="info-item"><div class="info-label">Date J</div><div class="info-value">${c.dateJ ? fmtDate(new Date(c.dateJ)) + (days !== null ? ` (J+${days})` : '') : '—'}</div></div>
+    <div class="info-item"><div class="info-label">Interlocuteur</div><div class="info-value">${c.contact || '—'}</div></div>
+    <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : '—'}</div></div>
+    <div class="info-item"><div class="info-label">Email</div><div class="info-value">${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}</div></div>
+    <div class="info-item"><div class="info-label">Site</div><div class="info-value">${c.site ? `<a href="https://${c.site}" target="_blank">${c.site}</a>` : '—'}</div></div>
+  `;
+
+  // Make sure edit form is hidden when opening panel
+  document.getElementById('edit-form-block').style.display = 'none';
+  document.getElementById('view-info-block').style.display = 'block';
+  document.getElementById('edit-toggle-btn').textContent = '✏ Modifier';
+
+  // Status picker
+  document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s => {
+    const sel = c.status === s.key;
+    return `<button class="status-option ${sel ? 'selected' : ''}" 
+      style="${sel ? `background:var(--accent-dim);border-color:var(--accent);color:var(--accent2)` : ''}"
+      onclick="setStatus(${c.id}, '${s.key}')">${s.label}</button>`;
+  }).join('');
+
+  // Sequence
+  const j = c.dateJ ? new Date(c.dateJ) : null;
+  const seqSteps = SEQ.map((step, i) => {
+    const dayOffset = [0, 0, 2, 4, 6, 10, 12][i];
+    const stepDate = j ? addDays(j, dayOffset) : null;
+    const stepDays = stepDate ? Math.floor((today - stepDate) / 86400000) : null;
+    let state = 'upcoming';
+    if (stepDays !== null) {
+      if (stepDays > 1) state = 'done';
+      else if (stepDays >= 0) state = 'pending';
+    }
+    return `
+    <div class="seq-item">
+      <div class="seq-check ${state}" onclick="event.stopPropagation()">
+        ${state === 'done' ? '✓' : state === 'pending' ? '◎' : ''}
+      </div>
+      <div class="seq-info">
+        <div class="seq-day">${step.day}</div>
+        <div class="seq-action">${step.label}</div>
+        ${stepDate ? `<div class="seq-date">${fmtDate(stepDate)}</div>` : ''}
+      </div>
+      <span class="seq-channel ${step.channel === 'mail' ? 'ch-mail' : 'ch-linkedin'}">${step.channel === 'mail' ? 'Mail' : 'Li'}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('panel-sequence').innerHTML = `
+    <div class="sequence-title">Séquence 12 jours de prospection</div>
+    ${seqSteps}`;
+
+  // Notes
+  document.getElementById('note-input').value = '';
+  renderNotes();
+
+  document.getElementById('panel-overlay').classList.add('open');
+  document.getElementById('side-panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.getElementById('side-panel').classList.remove('open');
+  selectedContact = null;
+}
+
+function setStatus(id, status) {
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  if (status === 'sent' && !c.dateJ) c.dateJ = today.toISOString().slice(0, 10);
+  c.status = status;
+  openPanel(id);
+  renderTable();
+  renderKanban();
+}
+
+function insertPrompt(text) {
+  const ta = document.getElementById('note-input');
+  ta.value = text;
+  ta.focus();
+  ta.setSelectionRange(text.length, text.length);
+}
+
+function saveNote() {
+  if (!selectedContact) return;
+  const val = document.getElementById('note-input').value.trim();
+  if (!val) return;
+  const ts = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  let type = 'Note';
+  if (val.startsWith('Réponse')) type = 'Réponse';
+  if (val.startsWith('Objection')) type = 'Objection';
+  if (val.startsWith('RDV')) type = 'RDV';
+  if (val.startsWith('Frein')) type = 'Frein';
+  if (val.startsWith('Intérêt')) type = 'Intérêt';
+  selectedContact.notes.unshift({ text: val, ts, type });
+  document.getElementById('note-input').value = '';
+  renderNotes();
+  renderTable();
+}
+
+function renderNotes() {
+  if (!selectedContact) return;
+  const list = document.getElementById('saved-notes-list');
+  if (!selectedContact.notes.length) {
+    list.innerHTML = `<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucune note — utilise les boutons ci-dessus pour commencer.</div>`;
+    return;
+  }
+  list.innerHTML = selectedContact.notes.map(n => `
+    <div class="saved-note">
+      <div class="note-header">
+        <span class="note-type">${n.type}</span>
+        <span class="note-ts">${n.ts}</span>
+      </div>
+      <div class="note-text">${n.text}</div>
+    </div>
+  `).join('');
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────────────────────
+
+function setStatusFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('filter-' + f);
+  if (el) el.classList.add('active');
+  renderTable();
+}
+
+function applyFilters() {
+  renderTable();
+}
+
+function filterSector(sector) {
+  currentSector = sector;
+  showPage('pipeline');
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('f-date').value = today.toISOString().slice(0, 10);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function addContact() {
+  const company = document.getElementById('f-company').value.trim();
+  if (!company) return alert('Nom de l\'entreprise requis');
+  contacts.push({
+    id: nextId++,
+    company,
+    specialite: document.getElementById('f-specialite').value.trim(),
+    sector: document.getElementById('f-sector').value,
+    location: document.getElementById('f-location').value.trim(),
+    contact: document.getElementById('f-contact').value.trim(),
+    phone: '',
+    email: document.getElementById('f-email').value.trim(),
+    site: document.getElementById('f-site').value.trim(),
+    status: 'todo',
+    dateJ: document.getElementById('f-date').value || '',
+    notes: [],
+  });
+  closeModal();
+  renderTable();
+  renderKanban();
+}
+
+// ─── EDIT FICHE ──────────────────────────────────────────────────────────────
+
+function toggleEditMode() {
+  const formBlock = document.getElementById('edit-form-block');
+  const viewBlock = document.getElementById('view-info-block');
+  const btn = document.getElementById('edit-toggle-btn');
+  const isEditing = formBlock.style.display !== 'none';
+
+  if (isEditing) {
+    cancelEdit();
+  } else {
+    const c = selectedContact;
+    document.getElementById('edit-company').value    = c.company || '';
+    document.getElementById('edit-specialite').value = c.specialite || '';
+    document.getElementById('edit-sector').value     = c.sector || 'Électronique industrielle';
+    document.getElementById('edit-location').value   = c.location || '';
+    document.getElementById('edit-contact').value    = c.contact || '';
+    document.getElementById('edit-phone').value      = c.phone || '';
+    document.getElementById('edit-email').value      = c.email || '';
+    document.getElementById('edit-site').value       = c.site || '';
+    document.getElementById('edit-dateJ').value      = c.dateJ || '';
+    formBlock.style.display = 'block';
+    viewBlock.style.display = 'none';
+    btn.textContent = '✕ Annuler';
+    btn.style.background = 'var(--red-dim)';
+    btn.style.color = 'var(--red)';
+    btn.style.borderColor = 'var(--red)';
+  }
+}
+
+function cancelEdit() {
+  document.getElementById('edit-form-block').style.display = 'none';
+  document.getElementById('view-info-block').style.display = 'block';
+  const btn = document.getElementById('edit-toggle-btn');
+  btn.textContent = '✏ Modifier';
+  btn.style.background = '';
+  btn.style.color = '';
+  btn.style.borderColor = '';
+}
+
+function saveEdit() {
+  if (!selectedContact) return;
+  const c = selectedContact;
+  c.company    = document.getElementById('edit-company').value.trim() || c.company;
+  c.specialite = document.getElementById('edit-specialite').value.trim();
+  c.sector     = document.getElementById('edit-sector').value;
+  c.location   = document.getElementById('edit-location').value.trim();
+  c.contact    = document.getElementById('edit-contact').value.trim();
+  c.phone      = document.getElementById('edit-phone').value.trim();
+  c.email      = document.getElementById('edit-email').value.trim();
+  c.site       = document.getElementById('edit-site').value.trim();
+  c.dateJ      = document.getElementById('edit-dateJ').value || '';
+
+  // Refresh panel with saved data
+  openPanel(c.id);
+  renderTable();
+  renderKanban();
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+
+const PAGE_TITLES = {
+  pipeline: '⚡ Pipeline',
+  contacts: '◉ Contacts',
+  agenda: '◷ Agenda',
+  kanban: '▦ Kanban',
+};
+
+function showPage(p) {
+  currentSector = null;
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const navEl = document.getElementById('nav-' + p);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[p] || p;
+  if (p === 'kanban') renderKanban();
+  if (p === 'agenda') renderAgenda();
+  if (p === 'pipeline' || p === 'contacts') renderTable();
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortAsc = !sortAsc;
+  else { sortKey = key; sortAsc = true; }
+  contacts.sort((a, b) => {
+    const av = (a[key] || '').toString().toLowerCase();
+    const bv = (b[key] || '').toString().toLowerCase();
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  renderTable();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+renderTable();
+</script>
+</body>
+</html>
