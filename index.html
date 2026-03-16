@@ -215,6 +215,8 @@ tr { cursor: pointer; }
 .badge-pilote .badge-dot { background: var(--yellow-dark); }
 .badge-noreply  { background: var(--red-dim); color: var(--red); }
 .badge-noreply .badge-dot { background: var(--red); }
+.badge-negative { background: rgba(160,82,45,0.10); color: #7a3b1e; }
+.badge-negative .badge-dot { background: #a0522d; }
 
 .sector-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .sector-elec { background: rgba(0,47,75,0.10); color: var(--navy-mid); }
@@ -430,7 +432,6 @@ const CONFIG = {
     <div class="logo"><div class="logo-dot"></div>Stelneo CRM</div>
     <button class="nav-item active" onclick="showPage('pipeline')" id="nav-pipeline"><span class="nav-icon">⚡</span> Pipeline</button>
     <button class="nav-item" onclick="showPage('contacts')" id="nav-contacts"><span class="nav-icon">◉</span> Contacts</button>
-    <button class="nav-item" onclick="showPage('agenda')" id="nav-agenda"><span class="nav-icon">◷</span> Agenda</button>
     <button class="nav-item" onclick="showPage('kanban')" id="nav-kanban"><span class="nav-icon">▦</span> Kanban</button>
     <button class="nav-item" onclick="showPage('analyses')" id="nav-analyses"><span class="nav-icon">◈</span> Analyses</button>
     <div class="sidebar-section">Secteurs</div>
@@ -480,12 +481,13 @@ const CONFIG = {
           <div class="stat-card"><div class="stat-label">Pilotes</div><div class="stat-value stat-blue" id="stat-pilote">0</div><div class="stat-sub">objectif : 3</div></div>
         </div>
         <div class="filters">
-          <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-input" oninput="renderTable()">
+          <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-pipeline" oninput="renderTable()">
           <button class="filter-chip active" id="filter-all"      onclick="setStatusFilter('all')">Tous</button>
           <button class="filter-chip" id="filter-todo"     onclick="setStatusFilter('todo')">À contacter</button>
           <button class="filter-chip" id="filter-sent"     onclick="setStatusFilter('sent')">J envoyé</button>
           <button class="filter-chip" id="filter-followup" onclick="setStatusFilter('followup')">Relance J+6</button>
           <button class="filter-chip" id="filter-replied"  onclick="setStatusFilter('replied')">Répondu</button>
+          <button class="filter-chip" id="filter-negative" onclick="setStatusFilter('negative')">Réponse négative</button>
           <button class="filter-chip" id="filter-pilote"   onclick="setStatusFilter('pilote')">Pilote</button>
         </div>
         <div class="table-wrap">
@@ -503,7 +505,7 @@ const CONFIG = {
       <!-- CONTACTS -->
       <div class="page" id="page-contacts">
         <div class="filters">
-          <input type="text" class="search-box" placeholder="🔍  Rechercher..." oninput="renderTable()">
+          <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-contacts" oninput="renderTable2()">
         </div>
         <div class="table-wrap">
           <table><thead><tr>
@@ -630,6 +632,8 @@ const CONFIG = {
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()"
         style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">✏ Modifier</button>
+      <button class="btn btn-sm" onclick="deleteContact()"
+        style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">🗑 Supprimer</button>
       <button class="close-btn" onclick="closePanel()">✕</button>
     </div>
   </div>
@@ -871,12 +875,13 @@ function doImport() {
 // ════════════════════════════════════════════════════════════
 
 const STATUSES = [
-  { key:'todo',     label:'À contacter',  cls:'badge-todo' },
-  { key:'sent',     label:'J envoyé',      cls:'badge-sent' },
-  { key:'followup', label:'Relance J+6',   cls:'badge-followup' },
-  { key:'replied',  label:'Répondu ✓',     cls:'badge-replied' },
-  { key:'pilote',   label:'Pilote 🎯',     cls:'badge-pilote' },
-  { key:'noreply',  label:'Sans réponse',  cls:'badge-noreply' },
+  { key:'todo',     label:'À contacter',       cls:'badge-todo' },
+  { key:'sent',     label:'J envoyé',           cls:'badge-sent' },
+  { key:'followup', label:'Relance J+6',        cls:'badge-followup' },
+  { key:'replied',  label:'Répondu ✓',          cls:'badge-replied' },
+  { key:'negative', label:'Réponse négative',   cls:'badge-negative' },
+  { key:'pilote',   label:'Pilote 🎯',          cls:'badge-pilote' },
+  { key:'noreply',  label:'Sans réponse',       cls:'badge-noreply' },
 ];
 
 const SECTOR_CLS = {
@@ -989,7 +994,7 @@ function setLoading(show, text='') {
 function rowToArray(c) {
   return [c.id, c.company, c.specialite, c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
-          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[])];
+          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]), JSON.stringify(c.seqDone||[])];
 }
 
 // Bascule automatiquement les statuts selon la date J
@@ -1041,6 +1046,7 @@ async function syncFromSheets() {
       dateJ:      r.dateJ          || '',
       notes:   (() => { try { return JSON.parse(r.notes    || '[]'); } catch(e) { return []; } })(),
       linkedin:(() => { try { return JSON.parse(r.linkedin  || '[]'); } catch(e) { return []; } })(),
+      seqDone: (() => { try { return JSON.parse(r.seqDone   || '[]'); } catch(e) { return []; } })(),
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
     autoUpgradeStatuses();
@@ -1098,6 +1104,14 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('app').classList.add('visible');
     initApp();
   }
+
+  // Délégation d'événements pour le picker de statut
+  document.getElementById('panel-status-picker').addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn || !selectedContact) return;
+    if (btn.dataset.action === 'setstatus') setStatus(selectedContact.id, btn.dataset.key);
+    if (btn.dataset.action === 'negative')  markNegative();
+  });
 });
 
 // ════════════════════════════════════════════════════════════
@@ -1108,8 +1122,8 @@ function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return
 function fmtDate(d) { return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}); }
 function daysSince(s) { if (!s) return null; return Math.floor((today - new Date(s)) / 86400000); }
 
-function getFiltered() {
-  const q = (document.getElementById('search-input')||{}).value?.toLowerCase()||'';
+function getFiltered(searchId) {
+  const q = (document.getElementById(searchId||'search-pipeline')||{}).value?.toLowerCase()||'';
   return contacts.filter(c => {
     if (currentSector && c.sector !== currentSector) return false;
     if (currentFilter !== 'all' && c.status !== currentFilter) return false;
@@ -1137,7 +1151,7 @@ function renderTable() {
   const tbody = document.getElementById('contacts-tbody');
   if (!tbody) return;
   updateStats();
-  const data = getFiltered();
+  const data = getFiltered('search-pipeline');
   if (!data.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">Aucun contact trouvé</div></div></td></tr>`;
     return;
@@ -1160,7 +1174,7 @@ function renderTable() {
 function renderTable2() {
   const tbody = document.getElementById('contacts-tbody2');
   if (!tbody) return;
-  const data = getFiltered();
+  const data = getFiltered('search-contacts');
   tbody.innerHTML = data.map(c => {
     const st = STATUSES.find(s=>s.key===c.status)||STATUSES[0];
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
@@ -1179,7 +1193,7 @@ function renderTable2() {
 function updateStats() {
   document.getElementById('stat-total').textContent    = contacts.length;
   document.getElementById('stat-followup').textContent = contacts.filter(c=>c.status==='followup').length;
-  document.getElementById('stat-replied').textContent  = contacts.filter(c=>['replied','pilote'].includes(c.status)).length;
+  document.getElementById('stat-replied').textContent  = contacts.filter(c=>['replied','negative','pilote'].includes(c.status)).length;
   document.getElementById('stat-pilote').textContent   = contacts.filter(c=>c.status==='pilote').length;
 
   // Bannière urgente dynamique
@@ -1271,15 +1285,23 @@ function openPanel(id) {
     <div class="info-item full"><div class="info-label">Email</div><div class="info-value">${c.email?`<a href="mailto:${c.email}">${c.email}</a>`:'—'}</div></div>
     <div class="info-item full"><div class="info-label">Site</div><div class="info-value">${c.site?`<a href="https://${c.site}" target="_blank">${c.site}</a>`:'—'}</div></div>`;
   document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s=>`
-    <button class="status-option ${c.status===s.key?'selected':''}" onclick="setStatus(${c.id},'${s.key}')">${s.label}</button>`).join('');
-  const j = c.dateJ?new Date(c.dateJ):null;
-  document.getElementById('panel-sequence').innerHTML = `<div class="sequence-title">Séquence 12 jours</div>`+SEQ_STEPS.map((step,i)=>{
-    const stepDate = j?addDays(j,step.offset):null;
-    const sd = stepDate?Math.floor((today-stepDate)/86400000):null;
-    const state = sd===null?'upcoming':sd>1?'done':sd>=0?'pending':'upcoming';
-    return `<div class="seq-item">
-      <div class="seq-check ${state}">${state==='done'?'✓':state==='pending'?'◎':''}</div>
-      <div class="seq-info"><div class="seq-day">${step.day}</div><div class="seq-action">${step.label}</div>${stepDate?`<div class="seq-date">${fmtDate(stepDate)}</div>`:''}</div>
+    <button class="status-option ${c.status===s.key?'selected':''}" data-action="setstatus" data-key="${s.key}">${s.label}</button>`).join('');
+
+  // Séquence cochable manuellement
+  if (!c.seqDone) c.seqDone = [];
+  document.getElementById('panel-sequence').innerHTML = `<div class="sequence-title">Séquence 12 jours — to-do list</div>`+SEQ_STEPS.map((step,i)=>{
+    const done = c.seqDone.includes(i);
+    const j2 = c.dateJ?new Date(c.dateJ):null;
+    const stepDate = j2?addDays(j2,step.offset):null;
+    return `<div class="seq-item" style="${done?'opacity:0.55':''}">
+      <div class="seq-check ${done?'done':'upcoming'}" onclick="toggleSeq(${c.id},${i})" style="cursor:pointer;flex-shrink:0;">
+        ${done?'✓':''}
+      </div>
+      <div class="seq-info">
+        <div class="seq-day">${step.day}</div>
+        <div class="seq-action" style="${done?'text-decoration:line-through;':''}">${step.label}</div>
+        ${stepDate?`<div class="seq-date">${fmtDate(stepDate)}</div>`:''}
+      </div>
       <span class="seq-channel ${step.channel==='mail'?'ch-mail':'ch-linkedin'}">${step.channel==='mail'?'Mail':'Li'}</span>
     </div>`;
   }).join('');
@@ -1427,6 +1449,45 @@ function addContact() {
   renderKanban();
 }
 
+function toggleSeq(id, stepIdx) {
+  const c = contacts.find(x=>x.id===id);
+  if (!c) return;
+  if (!c.seqDone) c.seqDone = [];
+  const pos = c.seqDone.indexOf(stepIdx);
+  if (pos >= 0) c.seqDone.splice(pos, 1);
+  else c.seqDone.push(stepIdx);
+  saveRowToSheets(c);
+  openPanel(id);
+}
+
+function markNegative() {
+  if (!selectedContact) return;
+  const c = selectedContact;
+  c.status = 'negative';
+  const ts = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  c.notes.unshift({ text:'Réponse négative reçue', ts, type:'Négatif' });
+  saveRowToSheets(c);
+  openPanel(c.id);
+  renderAll();
+}
+
+function deleteContact() {
+  if (!selectedContact) return;
+  const c = selectedContact;
+  if (!confirm(`Supprimer définitivement "${c.company}" ?\n\nCette action est irréversible.`)) return;
+  // Supprime du Sheets
+  if (CONFIG.WEBHOOK) {
+    fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id: c.id }),
+    }).catch(console.error);
+  }
+  contacts = contacts.filter(x=>x.id!==c.id);
+  closePanel();
+  renderAll();
+  renderKanban();
+}
+
 // ── NAV ─────────────────────────────────────────────────────
 function showPage(p) {
   currentSector=null;
@@ -1434,10 +1495,9 @@ function showPage(p) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   (document.getElementById('nav-'+p)||{}).classList?.add('active');
-  const titles = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',agenda:'◷ Agenda',kanban:'▦ Kanban',analyses:'◈ Analyses'};
+  const titles = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',kanban:'▦ Kanban',analyses:'◈ Analyses'};
   document.getElementById('page-title').textContent = titles[p]||p;
   if (p==='kanban')   renderKanban();
-  if (p==='agenda')   renderAgenda();
   if (p==='analyses') renderAnalyses();
   if (p==='pipeline'||p==='contacts') renderAll();
 }
@@ -1538,7 +1598,7 @@ function deleteLiPerson(id, idx) {
 
 const STATUS_COLORS = {
   todo:'#7a9bb0', sent:'#003d61', followup:'#c47f00',
-  replied:'#1a8a5a', pilote:'#d4a020', noreply:'#c0392b'
+  replied:'#1a8a5a', negative:'#a0522d', pilote:'#d4a020', noreply:'#c0392b'
 };
 
 function renderAnalyses() {
