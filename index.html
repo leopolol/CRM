@@ -432,6 +432,7 @@ const CONFIG = {
     <button class="nav-item" onclick="showPage('contacts')" id="nav-contacts"><span class="nav-icon">◉</span> Contacts</button>
     <button class="nav-item" onclick="showPage('agenda')" id="nav-agenda"><span class="nav-icon">◷</span> Agenda</button>
     <button class="nav-item" onclick="showPage('kanban')" id="nav-kanban"><span class="nav-icon">▦</span> Kanban</button>
+    <button class="nav-item" onclick="showPage('analyses')" id="nav-analyses"><span class="nav-icon">◈</span> Analyses</button>
     <div class="sidebar-section">Secteurs</div>
     <button class="nav-item" onclick="filterSector('Électronique industrielle')"><span class="nav-icon" style="color:#60a5fa;">▸</span> Électronique</button>
     <button class="nav-item" onclick="filterSector('Médical')"><span class="nav-icon" style="color:#2dd4a0;">▸</span> Médical</button>
@@ -522,9 +523,101 @@ const CONFIG = {
         <div class="kanban" id="kanban-board"></div>
       </div>
 
+      <!-- ANALYSES -->
+      <div class="page" id="page-analyses">
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px;">
+          <div class="stat-card"><div class="stat-label">Taux de réponse global</div><div class="stat-value stat-green" id="an-taux">—</div><div class="stat-sub" id="an-taux-sub"></div></div>
+          <div class="stat-card"><div class="stat-label">Contacts actifs / total</div><div class="stat-value stat-blue" id="an-actifs">—</div><div class="stat-sub">répondus + pilotes</div></div>
+          <div class="stat-card"><div class="stat-label">Pilotes obtenus</div><div class="stat-value" id="an-pilotes">—</div><div class="stat-sub">objectif : 3</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+          <!-- Entonnoir par secteur -->
+          <div class="table-wrap" style="padding:20px;">
+            <div class="section-label" style="margin-bottom:16px;">Entonnoir par secteur</div>
+            <div id="an-funnel"></div>
+          </div>
+          <!-- Répartition statuts -->
+          <div class="table-wrap" style="padding:20px;">
+            <div class="section-label" style="margin-bottom:16px;">Répartition des statuts</div>
+            <div id="an-statuts"></div>
+          </div>
+        </div>
+
+        <!-- LinkedIn stats -->
+        <div class="table-wrap" style="padding:20px;margin-bottom:20px;">
+          <div class="section-label" style="margin-bottom:16px;">Performance LinkedIn</div>
+          <div id="an-linkedin"></div>
+        </div>
+
+        <!-- Liste des répondants -->
+        <div class="table-wrap">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Contacts ayant répondu ou en pilote</div>
+          <table><thead><tr>
+            <th>Entreprise</th><th>Secteur</th><th>Statut</th><th>Notes</th>
+          </tr></thead><tbody id="an-repondants"></tbody></table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+
+<style>
+/* ── LINKEDIN ── */
+.li-block { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.li-header {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.li-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; display:flex;align-items:center;gap:6px; }
+.li-logo { width:16px;height:16px;background:#0a66c2;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;flex-shrink:0; }
+.li-person {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.li-person:last-child { border-bottom: none; }
+.li-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--navy-light); color: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.li-info { flex: 1; min-width: 0; }
+.li-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.li-role { font-size: 11px; color: var(--text3); }
+.li-actions { display: flex; gap: 6px; align-items: center; }
+.li-pill {
+  padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border2); background: transparent; color: var(--text3);
+  cursor: pointer; transition: all 0.15s; font-family: var(--font);
+  white-space: nowrap;
+}
+.li-pill:hover { border-color: var(--border2); background: var(--bg4); }
+.li-pill.active-visite   { background: var(--blue-dim);  border-color: var(--blue);  color: var(--blue); }
+.li-pill.active-demande  { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+.li-pill.active-accepte  { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.li-pill.active-message  { background: var(--accent-dim);border-color: var(--navy);  color: var(--navy); }
+.li-add-row { padding: 10px 14px; display: flex; gap: 8px; border-top: 1px solid var(--border); }
+.li-add-input { flex:1; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:6px 10px; font-size:12px; color:var(--text); font-family:var(--font); outline:none; }
+.li-add-input:focus { border-color:var(--navy); }
+.li-add-input::placeholder { color:var(--text3); }
+.li-delete { background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; padding:2px 4px; border-radius:3px; transition:color 0.15s; }
+.li-delete:hover { color:var(--red); }
+
+/* ── ANALYSES ── */
+.an-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.an-bar-label { font-size:12px; color:var(--text2); width:140px; flex-shrink:0; }
+.an-bar-track { flex:1; background:var(--bg4); border-radius:4px; height:8px; overflow:hidden; }
+.an-bar-fill { height:100%; border-radius:4px; transition:width 0.4s ease; }
+.an-bar-val { font-size:11px; font-weight:600; color:var(--text3); width:32px; text-align:right; flex-shrink:0; }
+.an-stat-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.an-stat-row:last-child { border-bottom:none; }
+.an-stat-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.an-stat-name { font-size:13px;color:var(--text);flex:1; }
+.an-stat-count { font-size:13px;font-weight:600;color:var(--text2); }
+.an-stat-pct { font-size:11px;color:var(--text3);width:36px;text-align:right; }
+</style>
 
 <!-- SIDE PANEL -->
 <div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
@@ -586,6 +679,12 @@ const CONFIG = {
     <div>
       <div class="section-label">Séquence 12 jours</div>
       <div class="sequence-block" id="panel-sequence"></div>
+    </div>
+
+    <!-- LINKEDIN -->
+    <div>
+      <div class="section-label">LinkedIn</div>
+      <div class="li-block" id="panel-linkedin"></div>
     </div>
 
     <!-- NOTES -->
@@ -890,7 +989,7 @@ function setLoading(show, text='') {
 function rowToArray(c) {
   return [c.id, c.company, c.specialite, c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
-          c.dateJ, JSON.stringify(c.notes)];
+          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[])];
 }
 
 // Bascule automatiquement les statuts selon la date J
@@ -940,7 +1039,8 @@ async function syncFromSheets() {
       site:       r.site           || '',
       status:     r.status         || 'todo',
       dateJ:      r.dateJ          || '',
-      notes: (() => { try { return JSON.parse(r.notes || '[]'); } catch(e) { return []; } })(),
+      notes:   (() => { try { return JSON.parse(r.notes    || '[]'); } catch(e) { return []; } })(),
+      linkedin:(() => { try { return JSON.parse(r.linkedin  || '[]'); } catch(e) { return []; } })(),
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
     autoUpgradeStatuses();
@@ -1189,6 +1289,7 @@ function openPanel(id) {
   btn.textContent='✏ Modifier'; btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
   document.getElementById('note-input').value='';
   renderNotes();
+  renderLinkedin();
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('side-panel').classList.add('open');
 }
@@ -1333,9 +1434,11 @@ function showPage(p) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   (document.getElementById('nav-'+p)||{}).classList?.add('active');
-  document.getElementById('page-title').textContent = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',agenda:'◷ Agenda',kanban:'▦ Kanban'}[p]||p;
-  if (p==='kanban') renderKanban();
-  if (p==='agenda') renderAgenda();
+  const titles = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',agenda:'◷ Agenda',kanban:'▦ Kanban',analyses:'◈ Analyses'};
+  document.getElementById('page-title').textContent = titles[p]||p;
+  if (p==='kanban')   renderKanban();
+  if (p==='agenda')   renderAgenda();
+  if (p==='analyses') renderAnalyses();
   if (p==='pipeline'||p==='contacts') renderAll();
 }
 
@@ -1344,6 +1447,187 @@ function sortBy(key) {
   sortKey=key;
   contacts.sort((a,b)=>{ const av=(a[key]||'').toString().toLowerCase(), bv=(b[key]||'').toString().toLowerCase(); return sortAsc?av.localeCompare(bv):bv.localeCompare(av); });
   renderAll();
+}
+
+// ════════════════════════════════════════════════════════════
+//  LINKEDIN
+// ════════════════════════════════════════════════════════════
+
+// linkedin stocké dans c.linkedin = [ {name, role, visite, demande, accepte, message}, ... ]
+
+function getLi(c) {
+  if (!c.linkedin) c.linkedin = [];
+  return c.linkedin;
+}
+
+function saveLi(c) {
+  // Sérialise linkedin dans notes pour le Sheet (champ dédié si tu veux, ici on réutilise une clé séparée)
+  saveRowToSheets(c);
+}
+
+function renderLinkedin() {
+  if (!selectedContact) return;
+  const c = selectedContact;
+  const people = getLi(c);
+  const el = document.getElementById('panel-linkedin');
+
+  const rows = people.map((p,i) => {
+    const initials = p.name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+    return `
+    <div class="li-person">
+      <div class="li-avatar">${initials||'?'}</div>
+      <div class="li-info">
+        <div class="li-name">${p.name}</div>
+        <div class="li-role">${p.role||'—'}</div>
+      </div>
+      <div class="li-actions">
+        <button class="li-pill ${p.visite?'active-visite':''}"   onclick="toggleLi(${c.id},${i},'visite')"  title="Profil visité">👁 Visité</button>
+        <button class="li-pill ${p.demande?'active-demande':''}" onclick="toggleLi(${c.id},${i},'demande')" title="Demande envoyée">+ Demande</button>
+        <button class="li-pill ${p.accepte?'active-accepte':''}" onclick="toggleLi(${c.id},${i},'accepte')" title="Connexion acceptée">✓ Accepté</button>
+        <button class="li-pill ${p.message?'active-message':''}" onclick="toggleLi(${c.id},${i},'message')" title="Message envoyé">✉ Messagé</button>
+        <button class="li-delete" onclick="deleteLiPerson(${c.id},${i})" title="Supprimer">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="li-header">
+      <div class="li-title"><div class="li-logo">in</div> Contacts LinkedIn</div>
+      <span style="font-size:11px;color:var(--text3);">${people.length} contact${people.length>1?'s':''}</span>
+    </div>
+    ${rows || '<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucun contact LinkedIn — ajoute-en ci-dessous.</div>'}
+    <div class="li-add-row">
+      <input class="li-add-input" id="li-name-input" placeholder="Nom du contact (ex: Florence Bertrand)" onkeydown="if(event.key==='Enter')addLiPerson(${c.id})">
+      <input class="li-add-input" id="li-role-input" placeholder="Poste (ex: Dir. Ops)" style="max-width:160px;" onkeydown="if(event.key==='Enter')addLiPerson(${c.id})">
+      <button class="btn btn-primary btn-sm" onclick="addLiPerson(${c.id})">+ Ajouter</button>
+    </div>`;
+}
+
+function addLiPerson(id) {
+  const c = contacts.find(x=>x.id===id);
+  if (!c) return;
+  const name = document.getElementById('li-name-input').value.trim();
+  if (!name) return;
+  const role = document.getElementById('li-role-input').value.trim();
+  getLi(c).push({ name, role, visite:false, demande:false, accepte:false, message:false });
+  saveLi(c);
+  renderLinkedin();
+}
+
+function toggleLi(id, idx, field) {
+  const c = contacts.find(x=>x.id===id);
+  if (!c) return;
+  const p = getLi(c)[idx];
+  if (!p) return;
+  p[field] = !p[field];
+  saveLi(c);
+  renderLinkedin();
+}
+
+function deleteLiPerson(id, idx) {
+  const c = contacts.find(x=>x.id===id);
+  if (!c) return;
+  getLi(c).splice(idx,1);
+  saveLi(c);
+  renderLinkedin();
+}
+
+// ════════════════════════════════════════════════════════════
+//  ANALYSES
+// ════════════════════════════════════════════════════════════
+
+const STATUS_COLORS = {
+  todo:'#7a9bb0', sent:'#003d61', followup:'#c47f00',
+  replied:'#1a8a5a', pilote:'#d4a020', noreply:'#c0392b'
+};
+
+function renderAnalyses() {
+  const total = contacts.length;
+  const replied = contacts.filter(c=>['replied','pilote'].includes(c.status)).length;
+  const pilotes = contacts.filter(c=>c.status==='pilote').length;
+  const contacted = contacts.filter(c=>c.status!=='todo').length;
+
+  document.getElementById('an-taux').textContent    = contacted ? Math.round(replied/contacted*100)+'%' : '—';
+  document.getElementById('an-taux-sub').textContent = `${replied} réponses / ${contacted} contactés`;
+  document.getElementById('an-actifs').textContent  = replied+' / '+total;
+  document.getElementById('an-pilotes').textContent = pilotes + ' / 3';
+
+  // ── Entonnoir par secteur ──
+  const sectors = ['Électronique industrielle','Médical','Aéronautique'];
+  const sColors = ['#003d61','#1a8a5a','#d4a020'];
+  document.getElementById('an-funnel').innerHTML = sectors.map((s,i)=>{
+    const sc = contacts.filter(c=>c.sector===s||c.sector===s+' / Défense');
+    const ct = sc.filter(c=>c.status!=='todo').length;
+    const rep= sc.filter(c=>['replied','pilote'].includes(c.status)).length;
+    const pct= sc.length ? Math.round(ct/sc.length*100) : 0;
+    return `
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <span style="font-size:12px;font-weight:600;color:var(--text);">${s.split(' ')[0]}</span>
+        <span style="font-size:11px;color:var(--text3);">${sc.length} contacts · ${rep} réponse${rep>1?'s':''}</span>
+      </div>
+      <div class="an-bar-row" style="margin-bottom:4px;">
+        <div class="an-bar-label" style="font-size:11px;width:80px;">Contactés</div>
+        <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%;background:${sColors[i]};"></div></div>
+        <div class="an-bar-val">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Répartition statuts ──
+  document.getElementById('an-statuts').innerHTML = STATUSES.map(s=>{
+    const n = contacts.filter(c=>c.status===s.key).length;
+    const pct = total ? Math.round(n/total*100) : 0;
+    return `
+    <div class="an-stat-row">
+      <div class="an-stat-dot" style="background:${STATUS_COLORS[s.key]};"></div>
+      <div class="an-stat-name">${s.label}</div>
+      <div class="an-bar-track" style="max-width:120px;">
+        <div class="an-bar-fill" style="width:${pct}%;background:${STATUS_COLORS[s.key]};"></div>
+      </div>
+      <div class="an-stat-count">${n}</div>
+      <div class="an-stat-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // ── LinkedIn stats ──
+  const withLi = contacts.filter(c=>c.linkedin&&c.linkedin.length>0);
+  const liVisited  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.visite).length,0);
+  const liDemande  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.demande).length,0);
+  const liAccepte  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.accepte).length,0);
+  const liMessage  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.message).length,0);
+  const liTotal    = withLi.reduce((a,c)=>a+c.linkedin.length,0);
+  document.getElementById('an-linkedin').innerHTML = liTotal===0
+    ? '<div style="color:var(--text3);font-size:12px;">Aucune donnée LinkedIn encore — ajoute des contacts LinkedIn dans les fiches.</div>'
+    : [
+        {label:'Profils visités',  val:liVisited,  color:'#003d61'},
+        {label:'Demandes envoyées',val:liDemande,  color:'#c47f00'},
+        {label:'Connexions acceptées',val:liAccepte,color:'#1a8a5a'},
+        {label:'Messages envoyés', val:liMessage,  color:'#0a66c2'},
+      ].map(r=>`
+      <div class="an-bar-row">
+        <div class="an-bar-label">${r.label}</div>
+        <div class="an-bar-track">
+          <div class="an-bar-fill" style="width:${liTotal?Math.round(r.val/liTotal*100):0}%;background:${r.color};"></div>
+        </div>
+        <div class="an-bar-val">${r.val} / ${liTotal}</div>
+      </div>`).join('');
+
+  // ── Liste répondants ──
+  const rep = contacts.filter(c=>['replied','pilote'].includes(c.status));
+  document.getElementById('an-repondants').innerHTML = rep.length===0
+    ? `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">Aucune réponse encore</div></div></td></tr>`
+    : rep.map(c=>{
+        const st=STATUSES.find(s=>s.key===c.status)||STATUSES[0];
+        const sc=SECTOR_CLS[c.sector]||'sector-elec';
+        const noteCount=c.notes.length;
+        return `<tr onclick="openPanel(${c.id})">
+          <td><span class="company-name">${c.company}</span></td>
+          <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
+          <td><span class="badge ${st.cls}"><span class="badge-dot"></span>${st.label}</span></td>
+          <td style="color:var(--text3);font-size:12px;">${noteCount?'📝 '+noteCount:'—'}</td>
+        </tr>`;
+      }).join('');
 }
 
 // ── INIT ─────────────────────────────────────────────────────
