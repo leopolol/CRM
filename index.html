@@ -383,21 +383,15 @@ tr { cursor: pointer; }
 <body>
 
 <!-- ══════════════════════════════════════════════════
-  ⚙️  CONFIGURATION — Modifie uniquement ces 3 lignes
+  ⚙️  CONFIGURATION — Modifie uniquement ces 2 lignes
 ════════════════════════════════════════════════════ -->
 <script>
 const CONFIG = {
   // 1. Ton mot de passe CRM
-  PASSWORD: "stelneo2025",
+  PASSWORD: "stelneo2027",
 
-  // 2. L'ID de ton Google Sheet (visible dans l'URL : docs.google.com/spreadsheets/d/XXXXX/edit)
-  SHEET_ID: "1hlG9RIpHHkSS3UuabT0Bt0DclVv_It6XcuA58wCA6GE",
-
-  // 3. Ta clé API Google (voir guide ci-dessous)
-  API_KEY: "AIzaSyD3GF2FR_itXlYQwjMc0_yni7ne3IInq9E",
-
-  // Nom exact de l'onglet dans ton Google Sheet
-  SHEET_NAME: "CRM"
+  // 2. L'URL de ton Apps Script (Google Sheets)
+  WEBHOOK: "https://script.google.com/macros/s/AKfycbyZB3dVKpj1kdTrry9YqTu263-nnYBI-oZI4-sjCwh34LFc_NoGT8C7dBq-76X6pslvTw/exec"
 };
 </script>
 <!-- ══════════════════════════════════════════════════ -->
@@ -416,7 +410,7 @@ const CONFIG = {
     <div class="login-error" id="login-error">Mot de passe incorrect</div>
     <div class="login-setup-hint" id="setup-hint" style="display:none">
       <strong>⚙️ Configuration requise</strong><br>
-      Ouvre ce fichier HTML, remplace <code>TON_SHEET_ID_ICI</code> et <code>TA_CLE_API_ICI</code> en haut du code.<br>
+      Ouvre ce fichier HTML, remplace <code>WEBHOOK</code> par ton URL Apps Script.<br>
       Voir le guide fourni avec ce fichier.
     </div>
   </div>
@@ -469,8 +463,7 @@ const CONFIG = {
       <!-- Config banner -->
       <div class="config-banner" id="config-banner">
         <div class="config-banner-title">⚙️ Google Sheets non configuré — Mode local actif</div>
-        <p>Les données sont chargées localement. Pour les sauvegarder dans Google Sheets, remplace <code>TON_SHEET_ID_ICI</code> et <code>TA_CLE_API_ICI</code> dans le code HTML, puis recharge la page.<br>
-        <strong>Guide complet fourni dans le fichier GUIDE_SETUP.txt</strong></p>
+        <p>Les données sont chargées localement. Pour les sauvegarder, remplace <code>WEBHOOK</code> dans le code HTML par ton URL Apps Script.</p>
       </div>
 
       <!-- PIPELINE -->
@@ -848,7 +841,6 @@ let currentSector = null;
 let selectedContact = null;
 let sortKey = null;
 let sortAsc = true;
-let sheetsConfigured = false;
 const today = new Date(); today.setHours(0,0,0,0);
 
 // ════════════════════════════════════════════════════════════
@@ -885,93 +877,8 @@ const COLS = ['id','company','specialite','sector','location','contact','phone',
 
 function setSyncStatus(state, label) {
   const dot = document.getElementById('sync-dot');
-  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  dot.className = 'sync-dot' + (state==='syncing'?' syncing':state==='error'?' error':'');
   document.getElementById('sync-label').textContent = label;
-}
-
-async function syncFromSheets() {
-  if (!sheetsConfigured) { renderAll(); return; }
-  setSyncStatus('syncing', 'Chargement…');
-  setLoading(true, 'Lecture Google Sheets…');
-  try {
-    const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:L1000`);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    const rows = data.values || [];
-    contacts = rows.filter(r => r[0]).map(r => ({
-      id:         parseInt(r[0]) || 0,
-      company:    r[1]  || '',
-      specialite: r[2]  || '',
-      sector:     r[3]  || '',
-      location:   r[4]  || '',
-      contact:    r[5]  || '',
-      phone:      r[6]  || '',
-      email:      r[7]  || '',
-      site:       r[8]  || '',
-      status:     r[9]  || 'todo',
-      dateJ:      r[10] || '',
-      notes:      (() => { try { return JSON.parse(r[11] || '[]'); } catch(e){ return []; } })(),
-    }));
-    nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
-    setSyncStatus('ok', 'Synchronisé');
-    renderAll();
-  } catch(e) {
-    console.error(e);
-    setSyncStatus('error', 'Erreur Sheets');
-    if (!contacts.length) { contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS)); renderAll(); }
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function saveRowToSheets(c) {
-  if (!sheetsConfigured) return;
-  setSyncStatus('syncing', 'Sauvegarde…');
-  try {
-    // Cherche la ligne existante ou ajoute
-    const existing = await findRowIndex(c.id);
-    const rowData = [
-      c.id, c.company, c.specialite, c.sector, c.location,
-      c.contact, c.phone, c.email, c.site, c.status,
-      c.dateJ, JSON.stringify(c.notes)
-    ];
-    if (existing > 0) {
-      // Update ligne existante
-      const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A${existing}:L${existing}`);
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW&key=${CONFIG.API_KEY}`,
-        { method:'PUT', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ values: [rowData] }) }
-      );
-    } else {
-      // Append nouvelle ligne
-      const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A:L`);
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=${CONFIG.API_KEY}`,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ values: [rowData] }) }
-      );
-    }
-    setSyncStatus('ok', 'Sauvegardé ✓');
-  } catch(e) {
-    console.error(e);
-    setSyncStatus('error', 'Erreur sauvegarde');
-  }
-}
-
-async function findRowIndex(id) {
-  // Retourne le numéro de ligne (1-based, incluant header) ou -1
-  try {
-    const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A:A`);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const rows = data.values || [];
-    const idx = rows.findIndex(r => parseInt(r[0]) === id);
-    return idx >= 0 ? idx + 1 : -1;
-  } catch(e) { return -1; }
 }
 
 function setLoading(show, text='') {
@@ -980,38 +887,85 @@ function setLoading(show, text='') {
   if (text) document.getElementById('loading-text').textContent = text;
 }
 
+function rowToArray(c) {
+  return [c.id, c.company, c.specialite, c.sector, c.location,
+          c.contact, c.phone, c.email, c.site, c.status,
+          c.dateJ, JSON.stringify(c.notes)];
+}
+
+async function syncFromSheets() {
+  if (!CONFIG.WEBHOOK) { renderAll(); return; }
+  setSyncStatus('syncing', 'Chargement…');
+  setLoading(true, 'Lecture Google Sheets…');
+  try {
+    const res = await fetch(CONFIG.WEBHOOK);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Format inattendu');
+    contacts = data.map(r => ({
+      id:         parseInt(r.id)   || 0,
+      company:    r.company        || '',
+      specialite: r.specialite     || '',
+      sector:     r.sector         || '',
+      location:   r.location       || '',
+      contact:    r.contact        || '',
+      phone:      r.phone          || '',
+      email:      r.email          || '',
+      site:       r.site           || '',
+      status:     r.status         || 'todo',
+      dateJ:      r.dateJ          || '',
+      notes: (() => { try { return JSON.parse(r.notes || '[]'); } catch(e) { return []; } })(),
+    }));
+    nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
+    setSyncStatus('ok', 'Synchronisé ✓');
+    renderAll();
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('error', 'Erreur connexion');
+    if (!contacts.length) { contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS)); renderAll(); }
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function saveRowToSheets(c) {
+  if (!CONFIG.WEBHOOK) return;
+  setSyncStatus('syncing', 'Sauvegarde…');
+  try {
+    const res = await fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', row: rowToArray(c) }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    setSyncStatus('ok', 'Sauvegardé ✓');
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('error', 'Erreur sauvegarde');
+  }
+}
+
 // ════════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════════
 
 function initApp() {
-  sheetsConfigured = CONFIG.SHEET_ID !== 'TON_SHEET_ID_ICI' && CONFIG.API_KEY !== 'TA_CLE_API_ICI';
-  if (!sheetsConfigured) {
+  const configured = CONFIG.WEBHOOK && CONFIG.WEBHOOK.startsWith('https://script.google.com');
+  if (!configured) {
     document.getElementById('config-banner').classList.add('visible');
-    document.getElementById('login-setup-hint') && (document.getElementById('login-setup-hint').style.display='none');
     setSyncStatus('error', 'Mode local');
     contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS));
     renderAll();
   } else {
     syncFromSheets();
   }
-  // Auto-restore session
-  if (sessionStorage.getItem('crm_auth') === '1') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-  }
 }
 
-// Check session au chargement
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('crm_auth') === '1') {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     initApp();
-  }
-  // Affiche le hint de setup si pas configuré
-  if (CONFIG.SHEET_ID === 'TON_SHEET_ID_ICI') {
-    document.getElementById('setup-hint').style.display = 'block';
   }
 });
 
