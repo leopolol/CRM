@@ -388,7 +388,7 @@ tr { cursor: pointer; }
 <script>
 const CONFIG = {
   // 1. Ton mot de passe CRM
-  PASSWORD: "stelneo2027",
+  PASSWORD: "stelneo2025",
 
   // 2. L'URL de ton Apps Script (Google Sheets)
   WEBHOOK: "https://script.google.com/macros/s/AKfycbyZB3dVKpj1kdTrry9YqTu263-nnYBI-oZI4-sjCwh34LFc_NoGT8C7dBq-76X6pslvTw/exec"
@@ -893,6 +893,32 @@ function rowToArray(c) {
           c.dateJ, JSON.stringify(c.notes)];
 }
 
+// Bascule automatiquement les statuts selon la date J
+function autoUpgradeStatuses() {
+  const toSave = [];
+  contacts.forEach(c => {
+    if (!c.dateJ) return;
+    const d = daysSince(c.dateJ);
+    if (d === null) return;
+
+    // J envoyé + 6 jours ou plus → Relance J+6
+    if (c.status === 'sent' && d >= 6) {
+      c.status = 'followup';
+      toSave.push(c);
+    }
+    // Relance J+6 + 12 jours ou plus → Sans réponse (si pas répondu)
+    else if (c.status === 'followup' && d >= 12) {
+      c.status = 'noreply';
+      toSave.push(c);
+    }
+  });
+  // Sauvegarde les contacts dont le statut a changé
+  toSave.forEach(c => saveRowToSheets(c));
+  if (toSave.length > 0) {
+    console.log(`✓ ${toSave.length} statut(s) mis à jour automatiquement`);
+  }
+}
+
 async function syncFromSheets() {
   if (!CONFIG.WEBHOOK) { renderAll(); return; }
   setSyncStatus('syncing', 'Chargement…');
@@ -917,12 +943,17 @@ async function syncFromSheets() {
       notes: (() => { try { return JSON.parse(r.notes || '[]'); } catch(e) { return []; } })(),
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
+    autoUpgradeStatuses();
     setSyncStatus('ok', 'Synchronisé ✓');
     renderAll();
   } catch(e) {
     console.error(e);
     setSyncStatus('error', 'Erreur connexion');
-    if (!contacts.length) { contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS)); renderAll(); }
+    if (!contacts.length) {
+      contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS));
+      autoUpgradeStatuses();
+      renderAll();
+    }
   } finally {
     setLoading(false);
   }
