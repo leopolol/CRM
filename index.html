@@ -384,11 +384,11 @@ tr { cursor: pointer; }
 
 <!-- ══════════════════════════════════════════════════
   ⚙️  CONFIGURATION — Modifie uniquement ces 3 lignes
-════════════════════════════════════════════════════ -->  
+════════════════════════════════════════════════════ -->
 <script>
 const CONFIG = {
   // 1. Ton mot de passe CRM
-  PASSWORD: "stelneo2026",
+  PASSWORD: "stelneo2025",
 
   // 2. L'ID de ton Google Sheet (visible dans l'URL : docs.google.com/spreadsheets/d/XXXXX/edit)
   SHEET_ID: "1hlG9RIpHHkSS3UuabT0Bt0DclVv_It6XcuA58wCA6GE",
@@ -459,6 +459,7 @@ const CONFIG = {
       <div class="topbar-title" id="page-title">⚡ Pipeline</div>
       <div class="topbar-actions">
         <button class="btn btn-sm btn-yellow" onclick="syncFromSheets()" title="Recharger depuis Google Sheets">↻ Sync</button>
+        <button class="btn btn-sm" onclick="openImport()">⚡ Import rapide</button>
         <button class="btn btn-sm btn-primary" onclick="openModal()">+ Ajouter contact</button>
       </div>
     </div>
@@ -474,9 +475,9 @@ const CONFIG = {
 
       <!-- PIPELINE -->
       <div class="page active" id="page-pipeline">
-        <div class="urgent-banner">
+        <div class="urgent-banner" id="urgent-banner" style="display:none">
           <span style="font-size:16px;">⚑</span>
-          <span class="urgent-text">17 mars — <strong id="urgent-count">16 relances J+6</strong> électronique industrielle à envoyer aujourd'hui</span>
+          <span class="urgent-text" id="urgent-text"></span>
         </div>
         <div class="stats-row">
           <div class="stat-card"><div class="stat-label">Total contacts</div><div class="stat-value" id="stat-total">0</div><div class="stat-sub">en prospection</div></div>
@@ -619,7 +620,134 @@ const CONFIG = {
   </div>
 </div>
 
-<!-- MODAL AJOUT -->
+<!-- MODAL IMPORT RAPIDE -->
+<div class="modal-overlay" id="import-overlay">
+  <div class="modal" style="width:560px;">
+    <div class="modal-title">⚡ Import rapide — coller une liste</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+      Colle tes entreprises, <strong>une par ligne</strong>. Format libre — le CRM détecte automatiquement.<br>
+      Exemples acceptés :<br>
+      <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA</code><br>
+      <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA | Médical | Paris | contact@mail.com</code><br>
+      <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA | Aéronautique | Florence Bertrand | 06 12 34 56 78</code>
+    </p>
+    <div class="form-row">
+      <label class="form-label">Secteur par défaut (si non précisé)</label>
+      <select class="form-input" id="import-sector">
+        <option value="Électronique industrielle">Électronique industrielle</option>
+        <option value="Médical">Médical</option>
+        <option value="Aéronautique">Aéronautique / Défense</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Statut initial</label>
+      <select class="form-input" id="import-status">
+        <option value="sent">J envoyé (mail déjà parti)</option>
+        <option value="todo">À contacter</option>
+        <option value="followup">Relance J+6</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date J (date du premier mail)</label>
+      <input type="date" class="form-input" id="import-date">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Liste des entreprises *</label>
+      <textarea class="form-input" id="import-text" rows="10" placeholder="ISEM&#10;CMD Électronique&#10;SERMA Technologies | Médical | Mérignac&#10;TEMSEGA | Médical | Pessac | contact@temsega.fr&#10;TDM Ingénierie | Aéronautique | Florence Bertrand | 05 56 ..."></textarea>
+    </div>
+    <div id="import-preview" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--green-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--green);font-weight:600;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImport()">Annuler</button>
+      <button class="btn btn-sm" onclick="previewImport()" style="background:var(--bg3);">👁 Aperçu</button>
+      <button class="btn btn-primary" onclick="doImport()">✚ Importer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── IMPORT RAPIDE ────────────────────────────────────────────
+
+function openImport() {
+  document.getElementById('import-overlay').classList.add('open');
+  document.getElementById('import-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('import-preview').style.display='none';
+}
+function closeImport() { document.getElementById('import-overlay').classList.remove('open'); }
+
+function detectSector(txt) {
+  const t = txt.toLowerCase();
+  if (t.includes('méd') || t.includes('med') || t.includes('santé') || t.includes('chirurg')) return 'Médical';
+  if (t.includes('aéro') || t.includes('aero') || t.includes('défen') || t.includes('defen') || t.includes('avion') || t.includes('rafale')) return 'Aéronautique';
+  return null;
+}
+
+function parseImportLines() {
+  const raw   = document.getElementById('import-text').value;
+  const defSector = document.getElementById('import-sector').value;
+  const defStatus = document.getElementById('import-status').value;
+  const defDate   = document.getElementById('import-date').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  return lines.map(line => {
+    const parts = line.split('|').map(p=>p.trim());
+    const company = parts[0];
+    if (!company) return null;
+    // Détecte secteur dans n'importe quelle colonne
+    let sector = defSector;
+    let location='', contact='', phone='', email='', site='', specialite='';
+    parts.slice(1).forEach(p => {
+      const detectedSector = detectSector(p);
+      if (detectedSector && p.length < 40) { sector = detectedSector; return; }
+      if (p.includes('@'))  { email = p; return; }
+      if (/^[\d\s\+\-\.]{8,}$/.test(p)) { phone = p; return; }
+      if (p.match(/^https?:|\.fr|\.com/) ) { site = p.replace(/^https?:\/\//,''); return; }
+      if (!location) { location = p; return; }
+      if (!contact)  { contact  = p; return; }
+      specialite = p;
+    });
+    return { company, sector, location, contact, phone, email, site, specialite, status: defStatus, dateJ: defDate, notes:[] };
+  }).filter(Boolean);
+}
+
+function previewImport() {
+  const parsed = parseImportLines();
+  const preview = document.getElementById('import-preview');
+  if (!parsed.length) { preview.style.display='none'; return; }
+  // Vérifie doublons
+  const existing = contacts.map(c=>c.company.toLowerCase());
+  const news  = parsed.filter(p=>!existing.includes(p.company.toLowerCase()));
+  const dups  = parsed.filter(p=> existing.includes(p.company.toLowerCase()));
+  preview.style.display = 'block';
+  preview.innerHTML = `✚ ${news.length} nouveau${news.length>1?'x':''} contact${news.length>1?'s':''}` +
+    (dups.length ? ` · <span style="color:var(--amber)">⚠ ${dups.length} déjà existant${dups.length>1?'s':''} (ignoré${dups.length>1?'s':''})</span>` : '');
+}
+
+function doImport() {
+  const parsed = parseImportLines();
+  if (!parsed.length) return alert('Aucune ligne à importer');
+  const existing = contacts.map(c=>c.company.toLowerCase());
+  let added = 0;
+  parsed.forEach(p => {
+    if (existing.includes(p.company.toLowerCase())) return; // skip doublons
+    const c = { id: nextId++, ...p };
+    contacts.push(c);
+    saveRowToSheets(c);
+    added++;
+  });
+  closeImport();
+  document.getElementById('import-text').value = '';
+  renderAll();
+  if (added > 0) {
+    const banner = document.getElementById('import-preview');
+    // Flash confirmation dans la topbar
+    const btn = document.querySelector('[onclick="openImport()"]');
+    const orig = btn.textContent;
+    btn.textContent = `✓ ${added} importé${added>1?'s':''}`;
+    btn.style.background='var(--green-dim)'; btn.style.color='var(--green)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; btn.style.color=''; }, 2500);
+  }
+}
+</script>
+
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <div class="modal-title">Nouveau contact</div>
@@ -721,7 +849,7 @@ let selectedContact = null;
 let sortKey = null;
 let sortAsc = true;
 let sheetsConfigured = false;
-const today = new Date('2025-03-13');
+const today = new Date(); today.setHours(0,0,0,0);
 
 // ════════════════════════════════════════════════════════════
 //  AUTH
@@ -968,6 +1096,26 @@ function updateStats() {
   document.getElementById('stat-followup').textContent = contacts.filter(c=>c.status==='followup').length;
   document.getElementById('stat-replied').textContent  = contacts.filter(c=>['replied','pilote'].includes(c.status)).length;
   document.getElementById('stat-pilote').textContent   = contacts.filter(c=>c.status==='pilote').length;
+
+  // Bannière urgente dynamique
+  const urgent = contacts.filter(c => {
+    if (!c.dateJ) return false;
+    const d = daysSince(c.dateJ);
+    return (c.status==='sent' && d>=5) || (c.status==='followup' && d>=11);
+  });
+  const banner = document.getElementById('urgent-banner');
+  const txt    = document.getElementById('urgent-text');
+  if (urgent.length > 0) {
+    const j6  = urgent.filter(c=>c.status==='sent').length;
+    const j12 = urgent.filter(c=>c.status==='followup').length;
+    const parts = [];
+    if (j6)  parts.push(`<strong>${j6} relance${j6>1?'s':''} J+6</strong>`);
+    if (j12) parts.push(`<strong>${j12} clôture${j12>1?'s':''} J+12</strong>`);
+    txt.innerHTML = `Aujourd'hui — ${parts.join(' · ')} à envoyer`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 // ── KANBAN ──────────────────────────────────────────────────
