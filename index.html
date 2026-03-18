@@ -562,10 +562,6 @@ const CONFIG = {
       <div class="page" id="page-tunnels">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tunnel-sector-tabs"></div>
-          <div style="display:flex;gap:8px;">
-            <input class="search-box" id="new-sector-input" placeholder="Nouveau secteur…" style="max-width:200px;" onkeydown="if(event.key==='Enter')addSector()">
-            <button class="btn btn-primary btn-sm" onclick="addSector()">+ Secteur</button>
-          </div>
         </div>
         <div id="tunnel-content">
           <div class="empty-state"><div class="empty-icon">✉</div><div class="empty-text">Sélectionne ou crée un secteur pour commencer</div></div>
@@ -1792,23 +1788,35 @@ async function saveTunnelToSheets(sector) {
 
 // ── Render onglet Tunnels ────────────────────────────────────
 function renderTunnels() {
-  const sectors = Object.keys(tunnels);
+  // Détecte tous les secteurs uniques depuis les contacts
+  const contactSectors = [...new Set(contacts.map(c => c.sector).filter(Boolean))].sort();
+
+  // Crée les entrées manquantes dans tunnels
+  contactSectors.forEach(s => { if (!tunnels[s]) tunnels[s] = []; });
+
+  // Sélectionne le premier par défaut
+  if (!currentTunnelSector && contactSectors.length) currentTunnelSector = contactSectors[0];
 
   // Tabs secteurs
-  document.getElementById('tunnel-sector-tabs').innerHTML = sectors.map(s => `
-    <button class="tunnel-tab ${s===currentTunnelSector?'active':''}" onclick="selectTunnelSector('${s.replace(/'/g,"\\'")}')">
-      ${s} <span class="tunnel-tab-del" onclick="event.stopPropagation();deleteSector('${s.replace(/'/g,"\\'")}')">✕</span>
-    </button>`).join('');
+  document.getElementById('tunnel-sector-tabs').innerHTML = contactSectors.length
+    ? contactSectors.map(s => `
+        <button class="tunnel-tab ${s===currentTunnelSector?'active':''}" onclick="selectTunnelSector('${s.replace(/'/g,"\\'")}')">${s}</button>`).join('')
+    : '<span style="font-size:12px;color:var(--text3);">Aucun contact dans le CRM — ajoute des contacts d\'abord</span>';
 
   if (!currentTunnelSector || !tunnels[currentTunnelSector]) {
     document.getElementById('tunnel-content').innerHTML = `
       <div class="empty-state"><div class="empty-icon">✉</div>
-      <div class="empty-text">${sectors.length ? 'Sélectionne un secteur' : 'Crée ton premier secteur ci-dessus'}</div></div>`;
+      <div class="empty-text">Sélectionne un secteur pour configurer son tunnel</div></div>`;
     return;
   }
 
   const steps = tunnels[currentTunnelSector];
   document.getElementById('tunnel-content').innerHTML = `
+    <div style="margin-bottom:14px;padding:10px 14px;background:var(--navy-light);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);">
+      <strong style="color:var(--navy);">${steps.length} étape${steps.length>1?'s':''}</strong> dans le tunnel 
+      <strong>${currentTunnelSector}</strong> — 
+      ${contacts.filter(c=>c.sector===currentTunnelSector).length} contact${contacts.filter(c=>c.sector===currentTunnelSector).length>1?'s':''} concernés
+    </div>
     ${steps.map((step, i) => `
       <div class="tunnel-step" id="tstep-${i}">
         <div class="tunnel-step-header" onclick="toggleStep(${i})">
@@ -1822,7 +1830,7 @@ function renderTunnels() {
             onchange="updateStep(${i},'jour',this.value)" style="width:100px;">
           <div class="tunnel-label">Objet du mail</div>
           <input class="tunnel-input" type="text" value="${step.objet}"
-            oninput="updateStep(${i},'objet',this.value)" placeholder="ex: Re : Stelneo x [Entreprise] — suivi">
+            oninput="updateStep(${i},'objet',this.value)" placeholder="ex: Re : Stelneo x {company} — suivi">
           <div class="tunnel-label">Corps du mail <span style="font-size:10px;color:var(--text3);font-weight:400;">— Variables : {company} {contact} {sector}</span></div>
           <textarea class="tunnel-textarea"
             oninput="updateStep(${i},'corps',this.value)"
@@ -1856,31 +1864,6 @@ function toggleStep(i) {
 
 function selectTunnelSector(s) {
   currentTunnelSector = s;
-  renderTunnels();
-}
-
-function addSector() {
-  const input = document.getElementById('new-sector-input');
-  const s = input.value.trim();
-  if (!s) return;
-  if (!tunnels[s]) tunnels[s] = [];
-  currentTunnelSector = s;
-  input.value = '';
-  saveTunnelToSheets(s);
-  renderTunnels();
-}
-
-function deleteSector(s) {
-  if (!confirm(`Supprimer le tunnel "${s}" et toutes ses étapes ?`)) return;
-  delete tunnels[s];
-  if (currentTunnelSector === s) currentTunnelSector = Object.keys(tunnels)[0] || null;
-  // Supprime dans Sheets
-  if (CONFIG.WEBHOOK) {
-    fetch(CONFIG.WEBHOOK, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'deleteTunnel', sector: s })
-    }).catch(console.error);
-  }
   renderTunnels();
 }
 
