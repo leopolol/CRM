@@ -205,6 +205,8 @@ tr { cursor: pointer; }
 .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .badge-todo     { background: var(--bg4); color: var(--text2); }
 .badge-todo .badge-dot { background: var(--text3); }
+.badge-sequence { background: rgba(0,47,75,0.10); color: var(--navy); }
+.badge-sequence .badge-dot { background: var(--navy); }
 .badge-sent     { background: var(--blue-dim); color: var(--blue); }
 .badge-sent .badge-dot { background: var(--blue); }
 .badge-followup { background: var(--amber-dim); color: var(--amber); }
@@ -481,10 +483,10 @@ const CONFIG = {
           <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-pipeline" oninput="renderTable()">
           <button class="filter-chip active" id="filter-all"      onclick="setStatusFilter('all')">Tous</button>
           <button class="filter-chip" id="filter-todo"     onclick="setStatusFilter('todo')">À contacter</button>
-          <button class="filter-chip" id="filter-sent"     onclick="setStatusFilter('sent')">J envoyé</button>
-          <button class="filter-chip" id="filter-followup" onclick="setStatusFilter('followup')">Relance J+6</button>
+          <button class="filter-chip" id="filter-sequence" onclick="setStatusFilter('sequence')">En séquence</button>
+          <button class="filter-chip" id="filter-sent"     onclick="setStatusFilter('sent')">J+1 envoyé</button>
+          <button class="filter-chip" id="filter-followup" onclick="setStatusFilter('followup')">En relance</button>
           <button class="filter-chip" id="filter-replied"  onclick="setStatusFilter('replied')">Répondu</button>
-          <button class="filter-chip" id="filter-negative" onclick="setStatusFilter('negative')">Réponse négative</button>
           <button class="filter-chip" id="filter-pilote"   onclick="setStatusFilter('pilote')">Pilote</button>
         </div>
         <div class="table-wrap">
@@ -720,8 +722,8 @@ const CONFIG = {
     <!-- SÉQUENCE -->
     <div>
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        Séquence 12 jours
-        <button class="btn btn-sm btn-primary" id="seq-activate-btn" onclick="activateSequence(selectedContact?.id)">▶ Activer la séquence tunnel</button>
+        Tunnel de prospection
+        <div style="display:flex;gap:6px;" id="seq-btn-group"></div>
       </div>
       <div class="sequence-block" id="panel-sequence"></div>
     </div>
@@ -916,13 +918,14 @@ function doImport() {
 // ════════════════════════════════════════════════════════════
 
 const STATUSES = [
-  { key:'todo',     label:'À contacter',       cls:'badge-todo' },
-  { key:'sent',     label:'J envoyé',           cls:'badge-sent' },
-  { key:'followup', label:'Relance J+6',        cls:'badge-followup' },
-  { key:'replied',  label:'Répondu ✓',          cls:'badge-replied' },
-  { key:'negative', label:'Réponse négative',   cls:'badge-negative' },
-  { key:'pilote',   label:'Pilote 🎯',          cls:'badge-pilote' },
-  { key:'noreply',  label:'Sans réponse',       cls:'badge-noreply' },
+  { key:'todo',      label:'À contacter',    cls:'badge-todo' },
+  { key:'sequence',  label:'En séquence ▶',  cls:'badge-sequence' },
+  { key:'sent',      label:'J+1 envoyé',     cls:'badge-sent' },
+  { key:'followup',  label:'En relance',     cls:'badge-followup' },
+  { key:'replied',   label:'Répondu ✓',      cls:'badge-replied' },
+  { key:'negative',  label:'Réponse négative', cls:'badge-negative' },
+  { key:'pilote',    label:'Pilote 🎯',      cls:'badge-pilote' },
+  { key:'noreply',   label:'Sans réponse',   cls:'badge-noreply' },
 ];
 
 const SECTOR_CLS = {
@@ -1040,28 +1043,9 @@ function rowToArray(c) {
 
 // Bascule automatiquement les statuts selon la date J
 function autoUpgradeStatuses() {
-  const toSave = [];
-  contacts.forEach(c => {
-    if (!c.dateJ) return;
-    const d = daysSince(c.dateJ);
-    if (d === null) return;
-
-    // J envoyé + 6 jours ou plus → Relance J+6
-    if (c.status === 'sent' && d >= 6) {
-      c.status = 'followup';
-      toSave.push(c);
-    }
-    // Relance J+6 + 12 jours ou plus → Sans réponse (si pas répondu)
-    else if (c.status === 'followup' && d >= 12) {
-      c.status = 'noreply';
-      toSave.push(c);
-    }
-  });
-  // Sauvegarde les contacts dont le statut a changé
-  toSave.forEach(c => saveRowToSheets(c));
-  if (toSave.length > 0) {
-    console.log(`✓ ${toSave.length} statut(s) mis à jour automatiquement`);
-  }
+  // Les statuts sont maintenant gérés par Apps Script côté envoi.
+  // Ici on met juste à jour l'affichage sans toucher aux contacts en séquence active.
+  // Le seul upgrade CRM-side : si noreply manuel reste cohérent.
 }
 
 async function syncFromSheets() {
@@ -1135,7 +1119,8 @@ function initApp() {
     contacts = JSON.parse(JSON.stringify(DEFAULT_CONTACTS));
     renderAll();
   } else {
-    syncFromSheets();
+    // Charge tunnels + contacts en parallèle
+    Promise.all([syncFromSheets(), loadTunnels()]);
   }
 }
 
@@ -1357,6 +1342,7 @@ function openPanel(id) {
   document.getElementById('note-input').value='';
   renderNotes();
   renderLinkedin();
+  renderSequencePanel(c);
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('side-panel').classList.add('open');
 }
@@ -1643,7 +1629,7 @@ function deleteLiPerson(id, idx) {
 // ════════════════════════════════════════════════════════════
 
 const STATUS_COLORS = {
-  todo:'#7a9bb0', sent:'#003d61', followup:'#c47f00',
+  todo:'#7a9bb0', sequence:'#002f4b', sent:'#003d61', followup:'#c47f00',
   replied:'#1a8a5a', negative:'#a0522d', pilote:'#d4a020', noreply:'#c0392b'
 };
 
@@ -1902,30 +1888,98 @@ function deleteStep(i) {
 }
 
 // ── Activer séquence sur un contact ─────────────────────────
+// ── Rendu tunnel dans le panel ───────────────────────────────
+function renderSequencePanel(c) {
+  const seqBtnGroup = document.getElementById('seq-btn-group');
+  const inSequence  = ['sequence','sent','followup'].includes(c.status);
+  const isTerminal  = ['replied','negative','pilote','noreply'].includes(c.status);
+
+  // Boutons selon état
+  if (isTerminal) {
+    seqBtnGroup.innerHTML = `<span style="font-size:11px;color:var(--text3);">Tunnel terminé</span>`;
+  } else if (inSequence) {
+    seqBtnGroup.innerHTML = `
+      <span style="font-size:11px;color:var(--green);font-weight:600;">▶ En séquence</span>
+      <button class="btn btn-sm" onclick="deactivateSequence(${c.id})"
+        style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer du tunnel</button>`;
+  } else {
+    seqBtnGroup.innerHTML = `
+      <button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Ajouter à la séquence</button>`;
+  }
+
+  // Affiche les étapes du tunnel du secteur
+  const steps = (tunnels[c.sector] || []).slice().sort((a,b) => a.jour - b.jour);
+  if (!steps.length) {
+    document.getElementById('panel-sequence').innerHTML =
+      `<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucun tunnel configuré pour ce secteur — va dans l'onglet Tunnels.</div>`;
+    return;
+  }
+
+  const etapes = c.seqDone || [];
+  document.getElementById('panel-sequence').innerHTML =
+    `<div class="sequence-title">Étapes — ${c.sector}</div>` +
+    steps.map((step, i) => {
+      const done = etapes.includes(i);
+      return `<div class="seq-item" style="${done?'opacity:0.55':''}">
+        <div class="seq-check ${done?'done':'upcoming'}" onclick="toggleSeq(${c.id},${i})" style="cursor:pointer;">
+          ${done?'✓':''}
+        </div>
+        <div class="seq-info">
+          <div class="seq-day">J+${step.jour}</div>
+          <div class="seq-action" style="${done?'text-decoration:line-through;':''}">${step.objet||'(pas d\'objet)'}</div>
+        </div>
+        <span class="seq-channel ch-mail">Mail</span>
+      </div>`;
+    }).join('');
+}
+
 async function activateSequence(contactId) {
   const c = contacts.find(x=>x.id===contactId);
   if (!c) return;
-  if (!c.dateJ) return alert('Ce contact n\'a pas de date J — modifie sa fiche d\'abord.');
-  if (!c.email) return alert('Ce contact n\'a pas d\'email — impossible d\'activer la séquence.');
-  const sector = c.sector;
-  if (!tunnels[sector] || !tunnels[sector].length) {
-    return alert(`Aucun tunnel configuré pour le secteur "${sector}".\nCrée-le dans l'onglet Tunnels.`);
-  }
+  if (!c.email) return alert('Email manquant — impossible d\'activer la séquence.');
+  if (!tunnels[c.sector] || !tunnels[c.sector].length)
+    return alert(`Aucun tunnel configuré pour "${c.sector}".\nCrée-le dans l'onglet Tunnels.`);
   if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
+
+  // Date J = aujourd'hui
+  c.dateJ  = fmtDateInput(today);
+  c.status = 'sequence';
+  c.seqDone = [];
+
   try {
+    // Inscrit dans SEQUENCES (contact + date J + contact name pour variable)
     await fetch(CONFIG.WEBHOOK, {
       method: 'POST',
       body: JSON.stringify({
         action: 'activateSequence',
-        row: [c.id, c.company, c.email, c.sector, c.dateJ, '']
+        row: [c.id, c.company, c.email, c.sector, c.dateJ, '', c.contact||'']
       })
     });
-    setSyncStatus('ok', `Séquence activée pour ${c.company} ✓`);
-    // Confirmation visuelle
-    const btn = document.getElementById('seq-activate-btn');
-    if (btn) { btn.textContent = '✓ Séquence active'; btn.style.background='var(--green-dim)'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)'; }
+    // Sauvegarde le statut dans CRM
+    saveRowToSheets(c);
+    setSyncStatus('ok', `${c.company} ajouté à la séquence ✓`);
+    openPanel(c.id);
+    renderAll();
   } catch(e) { alert('Erreur activation séquence'); }
 }
+
+async function deactivateSequence(contactId) {
+  const c = contacts.find(x=>x.id===contactId);
+  if (!c) return;
+  if (!confirm(`Retirer "${c.company}" du tunnel de mail ?`)) return;
+  c.status = 'todo';
+  try {
+    await fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id: c.id, sheet: 'SEQUENCES' })
+    });
+    saveRowToSheets(c);
+    setSyncStatus('ok', `${c.company} retiré de la séquence`);
+    openPanel(c.id);
+    renderAll();
+  } catch(e) { saveRowToSheets(c); openPanel(c.id); renderAll(); }
+}
+
 </script>
 </body>
 </html>
