@@ -765,7 +765,7 @@ const CONFIG = {
 
 function openImport() {
   document.getElementById('import-overlay').classList.add('open');
-  document.getElementById('import-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('import-date').value = fmtDateInput(new Date());
   document.getElementById('import-preview').style.display='none';
 }
 function closeImport() { document.getElementById('import-overlay').classList.remove('open'); }
@@ -1120,6 +1120,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
 function fmtDate(d) { return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}); }
+function fmtDateInput(d) { return d.toLocaleDateString('fr-CA'); } // YYYY-MM-DD sans timezone
 function daysSince(s) { if (!s) return null; return Math.floor((today - new Date(s)) / 86400000); }
 
 function getFiltered(searchId) {
@@ -1178,12 +1179,15 @@ function renderTable2() {
   tbody.innerHTML = data.map(c => {
     const st = STATUSES.find(s=>s.key===c.status)||STATUSES[0];
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
+    const emailCell = c.email
+      ? `<a href="mailto:${c.email}" onclick="event.stopPropagation()" style="color:var(--navy)">${c.email}</a>`
+      : `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--red-dim);color:var(--red);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--red);">⚠ Email manquant</span>`;
     return `<tr onclick="openPanel(${c.id})">
       <td><span class="company-name">${c.company}</span></td>
       <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
       <td class="contact-cell">${c.contact||'—'}</td>
       <td class="contact-cell">${c.phone?`<a href="tel:${c.phone}" onclick="event.stopPropagation()">${c.phone}</a>`:'—'}</td>
-      <td class="contact-cell">${c.email?`<a href="mailto:${c.email}" onclick="event.stopPropagation()">${c.email}</a>`:'—'}</td>
+      <td class="contact-cell">${emailCell}</td>
       <td class="contact-cell">${c.site?`<a href="https://${c.site}" target="_blank" onclick="event.stopPropagation()">${c.site}</a>`:'—'}</td>
       <td><span class="badge ${st.cls}"><span class="badge-dot"></span>${st.label}</span></td>
     </tr>`;
@@ -1325,7 +1329,7 @@ function closePanel() {
 function setStatus(id, status) {
   const c = contacts.find(x=>x.id===id);
   if (!c) return;
-  if (status==='sent'&&!c.dateJ) c.dateJ=today.toISOString().slice(0,10);
+  if (status==='sent'&&!c.dateJ) c.dateJ=fmtDateInput(today);
   c.status=status;
   saveRowToSheets(c);
   openPanel(id);
@@ -1423,7 +1427,7 @@ function setStatusFilter(f) {
 function filterSector(s) { currentSector=s; showPage('pipeline'); }
 
 // ── MODAL ───────────────────────────────────────────────────
-function openModal() { document.getElementById('modal-overlay').classList.add('open'); document.getElementById('f-date').value=today.toISOString().slice(0,10); }
+function openModal() { document.getElementById('modal-overlay').classList.add('open'); document.getElementById('f-date').value=fmtDateInput(today); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
 function addContact() {
