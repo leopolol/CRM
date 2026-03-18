@@ -433,11 +433,8 @@ const CONFIG = {
     <button class="nav-item active" onclick="showPage('pipeline')" id="nav-pipeline"><span class="nav-icon">⚡</span> Pipeline</button>
     <button class="nav-item" onclick="showPage('contacts')" id="nav-contacts"><span class="nav-icon">◉</span> Contacts</button>
     <button class="nav-item" onclick="showPage('kanban')" id="nav-kanban"><span class="nav-icon">▦</span> Kanban</button>
+    <button class="nav-item" onclick="showPage('tunnels')" id="nav-tunnels"><span class="nav-icon">✉</span> Tunnels</button>
     <button class="nav-item" onclick="showPage('analyses')" id="nav-analyses"><span class="nav-icon">◈</span> Analyses</button>
-    <div class="sidebar-section">Secteurs</div>
-    <button class="nav-item" onclick="filterSector('Électronique industrielle')"><span class="nav-icon" style="color:#60a5fa;">▸</span> Électronique</button>
-    <button class="nav-item" onclick="filterSector('Médical')"><span class="nav-icon" style="color:#2dd4a0;">▸</span> Médical</button>
-    <button class="nav-item" onclick="filterSector('Aéronautique')"><span class="nav-icon" style="color:#F6C13C;">▸</span> Aéro / Défense</button>
     <div class="sidebar-bottom">
       <div class="sync-status">
         <div class="sync-dot" id="sync-dot"></div>
@@ -561,6 +558,20 @@ const CONFIG = {
         </div>
       </div>
 
+      <!-- TUNNELS -->
+      <div class="page" id="page-tunnels">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tunnel-sector-tabs"></div>
+          <div style="display:flex;gap:8px;">
+            <input class="search-box" id="new-sector-input" placeholder="Nouveau secteur…" style="max-width:200px;" onkeydown="if(event.key==='Enter')addSector()">
+            <button class="btn btn-primary btn-sm" onclick="addSector()">+ Secteur</button>
+          </div>
+        </div>
+        <div id="tunnel-content">
+          <div class="empty-state"><div class="empty-icon">✉</div><div class="empty-text">Sélectionne ou crée un secteur pour commencer</div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -619,6 +630,37 @@ const CONFIG = {
 .an-stat-name { font-size:13px;color:var(--text);flex:1; }
 .an-stat-count { font-size:13px;font-weight:600;color:var(--text2); }
 .an-stat-pct { font-size:11px;color:var(--text3);width:36px;text-align:right; }
+
+/* ── TUNNELS ── */
+.tunnel-tab { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text2); font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; font-family:var(--font); white-space:nowrap; }
+.tunnel-tab:hover { border-color:var(--border2); color:var(--text); }
+.tunnel-tab.active { background:var(--navy); border-color:var(--navy); color:#fff; font-weight:600; }
+.tunnel-tab-del { margin-left:4px; opacity:0.5; font-size:11px; cursor:pointer; }
+.tunnel-tab-del:hover { opacity:1; }
+
+.tunnel-step {
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius);
+  margin-bottom:12px; overflow:hidden;
+}
+.tunnel-step-header {
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  background:var(--bg3); border-bottom:1px solid var(--border); cursor:pointer;
+}
+.tunnel-step-day {
+  background:var(--navy); color:#fff; font-size:11px; font-weight:700;
+  padding:3px 10px; border-radius:20px; flex-shrink:0;
+}
+.tunnel-step-subject { font-size:13px; font-weight:600; color:var(--text); flex:1; }
+.tunnel-step-toggle { font-size:11px; color:var(--text3); }
+.tunnel-step-body { padding:16px; display:none; }
+.tunnel-step-body.open { display:block; }
+.tunnel-label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+.tunnel-input { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text); font-size:13px; font-family:var(--font); outline:none; margin-bottom:10px; transition:border-color 0.15s; }
+.tunnel-input:focus { border-color:var(--navy); }
+.tunnel-textarea { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; color:var(--text); font-size:13px; font-family:var(--font); outline:none; resize:vertical; min-height:140px; line-height:1.6; margin-bottom:10px; transition:border-color 0.15s; }
+.tunnel-textarea:focus { border-color:var(--navy); }
+.tunnel-step-actions { display:flex; gap:8px; justify-content:space-between; align-items:center; }
+.tunnel-add-row { display:flex; align-items:center; gap:10px; margin-top:16px; }
 </style>
 
 <!-- SIDE PANEL -->
@@ -681,7 +723,10 @@ const CONFIG = {
 
     <!-- SÉQUENCE -->
     <div>
-      <div class="section-label">Séquence 12 jours</div>
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Séquence 12 jours
+        <button class="btn btn-sm btn-primary" id="seq-activate-btn" onclick="activateSequence(selectedContact?.id)">▶ Activer la séquence tunnel</button>
+      </div>
       <div class="sequence-block" id="panel-sequence"></div>
     </div>
 
@@ -1499,10 +1544,11 @@ function showPage(p) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   (document.getElementById('nav-'+p)||{}).classList?.add('active');
-  const titles = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',kanban:'▦ Kanban',analyses:'◈ Analyses'};
+  const titles = {pipeline:'⚡ Pipeline',contacts:'◉ Contacts',kanban:'▦ Kanban',tunnels:'✉ Tunnels',analyses:'◈ Analyses'};
   document.getElementById('page-title').textContent = titles[p]||p;
   if (p==='kanban')   renderKanban();
   if (p==='analyses') renderAnalyses();
+  if (p==='tunnels')  { loadTunnels().then(()=>renderTunnels()); }
   if (p==='pipeline'||p==='contacts') renderAll();
 }
 
@@ -1696,6 +1742,207 @@ function renderAnalyses() {
 
 // ── INIT ─────────────────────────────────────────────────────
 renderAll();
+
+// ════════════════════════════════════════════════════════════
+//  TUNNELS
+// ════════════════════════════════════════════════════════════
+
+let tunnels = {};         // { "Électronique industrielle": [ {jour, objet, corps, actif}, ...] }
+let currentTunnelSector = null;
+
+// ── Lecture depuis Sheets ────────────────────────────────────
+async function loadTunnels() {
+  if (!CONFIG.WEBHOOK) return;
+  try {
+    const res  = await fetch(CONFIG.WEBHOOK + '?sheet=TUNNELS');
+    const data = await res.json();
+    tunnels = {};
+    data.forEach(r => {
+      const s = r.secteur;
+      if (!s) return;
+      if (!tunnels[s]) tunnels[s] = [];
+      tunnels[s].push({
+        jour:  parseInt(r.jour) || 0,
+        objet: r.objet  || '',
+        corps: r.corps  || '',
+        actif: r.actif  !== 'false',
+      });
+    });
+    // Trie chaque tunnel par jour croissant
+    Object.keys(tunnels).forEach(s => tunnels[s].sort((a,b) => a.jour - b.jour));
+  } catch(e) { console.error('Erreur chargement tunnels', e); }
+}
+
+// ── Sauvegarde tunnel complet dans Sheets ────────────────────
+async function saveTunnelToSheets(sector) {
+  if (!CONFIG.WEBHOOK) return;
+  const steps = tunnels[sector] || [];
+  try {
+    await fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveTunnel',
+        sector,
+        steps: steps.map(s => [sector, s.jour, s.objet, s.corps, s.actif])
+      })
+    });
+    setSyncStatus('ok', 'Tunnel sauvegardé ✓');
+  } catch(e) { setSyncStatus('error', 'Erreur sauvegarde tunnel'); }
+}
+
+// ── Render onglet Tunnels ────────────────────────────────────
+function renderTunnels() {
+  const sectors = Object.keys(tunnels);
+
+  // Tabs secteurs
+  document.getElementById('tunnel-sector-tabs').innerHTML = sectors.map(s => `
+    <button class="tunnel-tab ${s===currentTunnelSector?'active':''}" onclick="selectTunnelSector('${s.replace(/'/g,"\\'")}')">
+      ${s} <span class="tunnel-tab-del" onclick="event.stopPropagation();deleteSector('${s.replace(/'/g,"\\'")}')">✕</span>
+    </button>`).join('');
+
+  if (!currentTunnelSector || !tunnels[currentTunnelSector]) {
+    document.getElementById('tunnel-content').innerHTML = `
+      <div class="empty-state"><div class="empty-icon">✉</div>
+      <div class="empty-text">${sectors.length ? 'Sélectionne un secteur' : 'Crée ton premier secteur ci-dessus'}</div></div>`;
+    return;
+  }
+
+  const steps = tunnels[currentTunnelSector];
+  document.getElementById('tunnel-content').innerHTML = `
+    ${steps.map((step, i) => `
+      <div class="tunnel-step" id="tstep-${i}">
+        <div class="tunnel-step-header" onclick="toggleStep(${i})">
+          <span class="tunnel-step-day">J+${step.jour}</span>
+          <span class="tunnel-step-subject">${step.objet || '<em style="color:var(--text3)">Pas d\'objet</em>'}</span>
+          <span class="tunnel-step-toggle" id="toggle-icon-${i}">▼</span>
+        </div>
+        <div class="tunnel-step-body" id="step-body-${i}">
+          <div class="tunnel-label">Délai (jours après J)</div>
+          <input class="tunnel-input" type="number" min="1" value="${step.jour}"
+            onchange="updateStep(${i},'jour',this.value)" style="width:100px;">
+          <div class="tunnel-label">Objet du mail</div>
+          <input class="tunnel-input" type="text" value="${step.objet}"
+            oninput="updateStep(${i},'objet',this.value)" placeholder="ex: Re : Stelneo x [Entreprise] — suivi">
+          <div class="tunnel-label">Corps du mail <span style="font-size:10px;color:var(--text3);font-weight:400;">— Variables : {company} {contact} {sector}</span></div>
+          <textarea class="tunnel-textarea"
+            oninput="updateStep(${i},'corps',this.value)"
+            placeholder="Bonjour {contact},\n\nJe me permets de revenir vers vous…">${step.corps}</textarea>
+          <div class="tunnel-step-actions">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" ${step.actif?'checked':''} onchange="updateStep(${i},'actif',this.checked)">
+              Actif
+            </label>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-sm" onclick="saveStepNow(${i})" style="background:var(--green-dim);border-color:var(--green);color:var(--green);">💾 Sauvegarder</button>
+              <button class="btn btn-sm" onclick="deleteStep(${i})" style="background:var(--red-dim);border-color:var(--red);color:var(--red);">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('')}
+
+    <div class="tunnel-add-row">
+      <input class="tunnel-input" id="new-step-day" type="number" min="1" placeholder="Jour (ex: 6)" style="width:120px;margin-bottom:0;">
+      <button class="btn btn-primary" onclick="addStep()">+ Ajouter une étape</button>
+      <button class="btn btn-yellow" onclick="saveTunnelToSheets('${currentTunnelSector.replace(/'/g,"\\'")}')">💾 Tout sauvegarder</button>
+    </div>`;
+}
+
+function toggleStep(i) {
+  const body = document.getElementById('step-body-'+i);
+  const icon = document.getElementById('toggle-icon-'+i);
+  const open = body.classList.toggle('open');
+  icon.textContent = open ? '▲' : '▼';
+}
+
+function selectTunnelSector(s) {
+  currentTunnelSector = s;
+  renderTunnels();
+}
+
+function addSector() {
+  const input = document.getElementById('new-sector-input');
+  const s = input.value.trim();
+  if (!s) return;
+  if (!tunnels[s]) tunnels[s] = [];
+  currentTunnelSector = s;
+  input.value = '';
+  saveTunnelToSheets(s);
+  renderTunnels();
+}
+
+function deleteSector(s) {
+  if (!confirm(`Supprimer le tunnel "${s}" et toutes ses étapes ?`)) return;
+  delete tunnels[s];
+  if (currentTunnelSector === s) currentTunnelSector = Object.keys(tunnels)[0] || null;
+  // Supprime dans Sheets
+  if (CONFIG.WEBHOOK) {
+    fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteTunnel', sector: s })
+    }).catch(console.error);
+  }
+  renderTunnels();
+}
+
+function addStep() {
+  const jour = parseInt(document.getElementById('new-step-day').value);
+  if (!jour || jour < 1) return alert('Indique un délai en jours (ex: 6)');
+  if (!tunnels[currentTunnelSector]) tunnels[currentTunnelSector] = [];
+  tunnels[currentTunnelSector].push({ jour, objet:'', corps:'', actif:true });
+  tunnels[currentTunnelSector].sort((a,b) => a.jour - b.jour);
+  document.getElementById('new-step-day').value = '';
+  renderTunnels();
+  // Ouvre la nouvelle étape
+  const idx = tunnels[currentTunnelSector].findIndex(s=>s.jour===jour);
+  if (idx >= 0) toggleStep(idx);
+}
+
+function updateStep(i, field, val) {
+  if (!tunnels[currentTunnelSector]) return;
+  const step = tunnels[currentTunnelSector][i];
+  if (!step) return;
+  if (field === 'jour')  step.jour  = parseInt(val)||0;
+  if (field === 'objet') step.objet = val;
+  if (field === 'corps') step.corps = val;
+  if (field === 'actif') step.actif = val;
+}
+
+function saveStepNow(i) {
+  saveTunnelToSheets(currentTunnelSector);
+}
+
+function deleteStep(i) {
+  if (!confirm('Supprimer cette étape ?')) return;
+  tunnels[currentTunnelSector].splice(i, 1);
+  saveTunnelToSheets(currentTunnelSector);
+  renderTunnels();
+}
+
+// ── Activer séquence sur un contact ─────────────────────────
+async function activateSequence(contactId) {
+  const c = contacts.find(x=>x.id===contactId);
+  if (!c) return;
+  if (!c.dateJ) return alert('Ce contact n\'a pas de date J — modifie sa fiche d\'abord.');
+  if (!c.email) return alert('Ce contact n\'a pas d\'email — impossible d\'activer la séquence.');
+  const sector = c.sector;
+  if (!tunnels[sector] || !tunnels[sector].length) {
+    return alert(`Aucun tunnel configuré pour le secteur "${sector}".\nCrée-le dans l'onglet Tunnels.`);
+  }
+  if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
+  try {
+    await fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'activateSequence',
+        row: [c.id, c.company, c.email, c.sector, c.dateJ, '']
+      })
+    });
+    setSyncStatus('ok', `Séquence activée pour ${c.company} ✓`);
+    // Confirmation visuelle
+    const btn = document.getElementById('seq-activate-btn');
+    if (btn) { btn.textContent = '✓ Séquence active'; btn.style.background='var(--green-dim)'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)'; }
+  } catch(e) { alert('Erreur activation séquence'); }
+}
 </script>
 </body>
 </html>
