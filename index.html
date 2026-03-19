@@ -1190,6 +1190,7 @@ async function saveRowToSheets(c) {
   try {
     const res = await fetch(CONFIG.WEBHOOK, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'save', row: rowToArray(c) }),
     });
     const json = await res.json();
@@ -1652,6 +1653,7 @@ function deleteContact() {
   if (CONFIG.WEBHOOK) {
     fetch(CONFIG.WEBHOOK, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'delete', id: c.id }),
     }).catch(console.error);
   }
@@ -2025,6 +2027,7 @@ async function doActivateSequence(c, emailEntry) {
   try {
     await fetch(CONFIG.WEBHOOK, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         action: 'activateSequence',
         row: [c.id, c.company, emailEntry.email, c.sector, c.dateJ, '', contactName]
@@ -2076,6 +2079,7 @@ async function saveTunnelToSheets(sector) {
   try {
     await fetch(CONFIG.WEBHOOK, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         action: 'saveTunnel',
         sector,
@@ -2276,6 +2280,7 @@ async function deactivateSequence(contactId) {
   try {
     await fetch(CONFIG.WEBHOOK, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'delete', id: c.id, sheet: 'SEQUENCES' })
     });
     saveRowToSheets(c);
