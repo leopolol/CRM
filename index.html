@@ -755,7 +755,6 @@ const CONFIG = {
       <div class="panel-meta" id="panel-meta"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <button class="btn btn-sm" id="grand-compte-btn" onclick="toggleGrandCompte()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">⭐ Grand compte</button>
       <button class="btn btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">✏ Modifier</button>
       <button class="btn btn-sm" onclick="deleteContact()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">🗑 Supprimer</button>
       <button class="close-btn" onclick="closePanel()">✕</button>
@@ -1131,8 +1130,7 @@ function rowToArray(c) {
   return [c.id, c.company, c.specialite, c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
           c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]),
-          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[]),
-          c.grandCompte ? '1' : ''];
+          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[]), ''];
 }
 
 // Bascule automatiquement les statuts selon la date J
@@ -1167,7 +1165,7 @@ async function syncFromSheets() {
       linkedin:(() => { try { return JSON.parse(r.linkedin  || '[]'); } catch(e) { return []; } })(),
       seqDone: (() => { try { return JSON.parse(r.seqDone   || '[]'); } catch(e) { return []; } })(),
       emails:      (() => { try { return JSON.parse(r.emails    || '[]'); } catch(e) { return []; } })(),
-      grandCompte: r.grandCompte === '1' || r.grandCompte === true,
+      grandCompte: false,
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
     autoUpgradeStatuses();
@@ -1285,7 +1283,7 @@ function renderTable() {
     const na = getNextAction(c);
     return `<tr onclick="openPanel(${c.id})">
       <td><div class="company-cell">
-        <span class="company-name">${c.company}${c.grandCompte?' <span class="badge-grand-compte">★ Grand</span>':''}</span>
+        <span class="company-name">${c.company}</span>
         <span class="company-sub">${c.specialite||''}</span>
       </div></td>
       <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
@@ -1412,22 +1410,8 @@ function openPanel(id) {
   const sc = SECTOR_CLS[c.sector]||'sector-elec';
   document.getElementById('panel-meta').innerHTML =
     `<span class="sector-badge ${sc}">${c.sector}</span>` +
-    (c.grandCompte ? `<span class="badge-grand-compte">★ Grand compte</span>` : '') +
     `<span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
 
-  // Met à jour le bouton grand compte
-  const gcBtn = document.getElementById('grand-compte-btn');
-  if (c.grandCompte) {
-    gcBtn.style.background = 'var(--yellow)';
-    gcBtn.style.color      = 'var(--navy-dark)';
-    gcBtn.style.borderColor= 'var(--yellow-dark)';
-    gcBtn.textContent      = '★ Grand compte';
-  } else {
-    gcBtn.style.background = 'rgba(255,255,255,0.12)';
-    gcBtn.style.color      = '#fff';
-    gcBtn.style.borderColor= 'rgba(255,255,255,0.25)';
-    gcBtn.textContent      = '⭐ Grand compte';
-  }
   const days = daysSince(c.dateJ);
   const emails = c.emails || [];
   const nbSansReponse = emails.filter(e=>e.statut==='sans_reponse').length;
@@ -2234,7 +2218,7 @@ function renderSequencePanel(c) {
         style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer</button>`;
   } else {
     seqBtnGroup.innerHTML =
-      (c.grandCompte && hasMultiEmails
+      (hasMultiEmails
         ? `<button class="btn btn-sm btn-yellow" onclick="openCanon(${c.id})">🎯 Lancer en canon</button> `
         : '') +
       `<button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Séquence</button>`;
@@ -2304,16 +2288,6 @@ async function deactivateSequence(contactId) {
 // ════════════════════════════════════════════════════════════
 //  GRAND COMPTE
 // ════════════════════════════════════════════════════════════
-
-function toggleGrandCompte() {
-  if (!selectedContact) return;
-  const c = selectedContact;
-  c.grandCompte = !c.grandCompte;
-  saveRowToSheets(c);
-  openPanel(c.id);
-  renderAll();
-  renderKanban();
-}
 
 // ════════════════════════════════════════════════════════════
 //  CANON — lancement multi-contacts décalé
@@ -2431,7 +2405,6 @@ async function confirmCanon() {
     }
 
     c.status    = 'sequence';
-    c.grandCompte = true;
     c.seqDone   = [];
     saveRowToSheets(c);
     setSyncStatus('ok', `Canon lancé — ${ok}/${_canonOrder.length} tunnels activés pour ${c.company} ✓`);
