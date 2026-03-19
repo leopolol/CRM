@@ -2234,7 +2234,7 @@ function renderSequencePanel(c) {
         style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer</button>`;
   } else {
     seqBtnGroup.innerHTML =
-      (c.grandCompte && hasMultiEmails
+      (hasMultiEmails
         ? `<button class="btn btn-sm btn-yellow" onclick="openCanon(${c.id})">🎯 Lancer en canon</button> `
         : '') +
       `<button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Séquence</button>`;
