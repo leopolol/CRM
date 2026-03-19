@@ -2375,44 +2375,42 @@ async function confirmCanon() {
   if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
 
   const today = new Date(); today.setHours(0,0,0,0);
+  // Capture les données AVANT de fermer la modale
+  const order = [..._canonOrder];
   closeCanon();
 
-  setSyncStatus('syncing', `Canon en cours… 0/${_canonOrder.length}`);
+  setSyncStatus('syncing', `Canon en cours… 0/${order.length}`);
 
   try {
     let ok = 0;
-    for (const entry of _canonOrder) {
+    for (const entry of order) {
       const dateJ0 = new Date(today);
       dateJ0.setDate(dateJ0.getDate() + entry.startDelay);
       const dateStr = `${dateJ0.getFullYear()}-${String(dateJ0.getMonth()+1).padStart(2,'0')}-${String(dateJ0.getDate()).padStart(2,'0')}`;
       const contactName = entry.prenom||entry.nom ? `${entry.prenom||''} ${entry.nom||''}`.trim() : '';
-      // ID composite pour éviter que Apps Script écrase la ligne précédente
-      const seqId = `${c.id}_${entry.email.replace(/[^a-zA-Z0-9]/g,'_')}`;
 
       try {
         await fetch(CONFIG.WEBHOOK, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain' }, // évite le preflight CORS
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
             action: 'activateSequence',
-            row: [seqId, c.company, entry.email, c.sector, dateStr, '', contactName],
-            canonMode: true // indique à Apps Script de toujours appendRow
+            row: [c.id, c.company, entry.email, c.sector, dateStr, '', contactName]
           })
         });
         ok++;
-        setSyncStatus('syncing', `Canon en cours… ${ok}/${_canonOrder.length}`);
+        setSyncStatus('syncing', `Canon en cours… ${ok}/${order.length}`);
       } catch(fetchErr) {
         console.error('Canon fetch error pour', entry.email, fetchErr);
       }
 
-      // Pause entre chaque requête pour éviter le throttle Apps Script
-      if (ok < _canonOrder.length) await new Promise(r => setTimeout(r, 900));
+      if (ok < order.length) await new Promise(r => setTimeout(r, 900));
     }
 
-    c.status    = 'sequence';
-    c.seqDone   = [];
+    c.status  = 'sequence';
+    c.seqDone = [];
     saveRowToSheets(c);
-    setSyncStatus('ok', `Canon lancé — ${ok}/${_canonOrder.length} tunnels activés pour ${c.company} ✓`);
+    setSyncStatus('ok', `Canon lancé — ${ok}/${order.length} tunnels activés pour ${c.company} ✓`);
     openPanel(c.id);
     renderAll();
   } catch(err) {
