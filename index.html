@@ -2234,7 +2234,7 @@ function renderSequencePanel(c) {
         style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer</button>`;
   } else {
     seqBtnGroup.innerHTML =
-      (hasMultiEmails
+      (c.grandCompte && hasMultiEmails
         ? `<button class="btn btn-sm btn-yellow" onclick="openCanon(${c.id})">🎯 Lancer en canon</button> `
         : '') +
       `<button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Séquence</button>`;
@@ -2464,4 +2464,12 @@ async function confirmCanon() {
     <div style="background:var(--navy-light);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:12px;color:var(--navy);">
       ⚡ <strong>Règle :</strong> Si un contact répond positivement, passe-le en "Répondu ✓" — le rapport du soir t'alertera sur les autres tunnels actifs de la même entreprise.
     </div>
-    <div style="display:flex;gap:8px;jus
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closeCanon()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmCanon()">🚀 Lancer le canon</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
