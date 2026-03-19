@@ -859,7 +859,7 @@ const CONFIG = {
       Colle tes entreprises, <strong>une par ligne</strong>. Format libre — le CRM détecte automatiquement.<br>
       Exemples acceptés :<br>
       <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA</code><br>
-      <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA | Médical | Paris | contact@mail.com</code><br>
+      <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA | Médical | Paris | <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="197a76776d787a6d5974787075377a7674">[email&#160;protected]</a></code><br>
       <code style="background:var(--bg3);padding:2px 6px;border-radius:3px;font-size:11px;">Entreprise SA | Aéronautique | Florence Bertrand | 06 12 34 56 78</code>
     </p>
     <div class="form-row">
@@ -895,7 +895,7 @@ const CONFIG = {
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── IMPORT RAPIDE ────────────────────────────────────────────
 
 function openImport() {
@@ -2398,31 +2398,47 @@ async function confirmCanon() {
   const today = new Date(); today.setHours(0,0,0,0);
   closeCanon();
 
+  setSyncStatus('syncing', `Canon en cours… 0/${_canonOrder.length}`);
+
   try {
-    // Lance un tunnel pour chaque contact avec la date J décalée
+    let ok = 0;
     for (const entry of _canonOrder) {
       const dateJ0 = new Date(today);
       dateJ0.setDate(dateJ0.getDate() + entry.startDelay);
       const dateStr = `${dateJ0.getFullYear()}-${String(dateJ0.getMonth()+1).padStart(2,'0')}-${String(dateJ0.getDate()).padStart(2,'0')}`;
       const contactName = entry.prenom||entry.nom ? `${entry.prenom||''} ${entry.nom||''}`.trim() : '';
+      // ID composite pour éviter que Apps Script écrase la ligne précédente
+      const seqId = `${c.id}_${entry.email.replace(/[^a-zA-Z0-9]/g,'_')}`;
 
-      await fetch(CONFIG.WEBHOOK, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'activateSequence',
-          row: [c.id, c.company, entry.email, c.sector, dateStr, '', contactName]
-        })
-      });
+      try {
+        await fetch(CONFIG.WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' }, // évite le preflight CORS
+          body: JSON.stringify({
+            action: 'activateSequence',
+            row: [seqId, c.company, entry.email, c.sector, dateStr, '', contactName],
+            canonMode: true // indique à Apps Script de toujours appendRow
+          })
+        });
+        ok++;
+        setSyncStatus('syncing', `Canon en cours… ${ok}/${_canonOrder.length}`);
+      } catch(fetchErr) {
+        console.error('Canon fetch error pour', entry.email, fetchErr);
+      }
+
+      // Pause entre chaque requête pour éviter le throttle Apps Script
+      if (ok < _canonOrder.length) await new Promise(r => setTimeout(r, 900));
     }
 
     c.status    = 'sequence';
     c.grandCompte = true;
     c.seqDone   = [];
     saveRowToSheets(c);
-    setSyncStatus('ok', `Canon lancé — ${_canonOrder.length} tunnels activés pour ${c.company} ✓`);
+    setSyncStatus('ok', `Canon lancé — ${ok}/${_canonOrder.length} tunnels activés pour ${c.company} ✓`);
     openPanel(c.id);
     renderAll();
   } catch(err) {
+    setSyncStatus('error', 'Erreur canon');
     alert('Erreur lors du lancement du canon : ' + err.message);
   }
 }
@@ -2448,9 +2464,4 @@ async function confirmCanon() {
     <div style="background:var(--navy-light);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:12px;color:var(--navy);">
       ⚡ <strong>Règle :</strong> Si un contact répond positivement, passe-le en "Répondu ✓" — le rapport du soir t'alertera sur les autres tunnels actifs de la même entreprise.
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-      <button class="btn" onclick="closeCanon()">Annuler</button>
-      <button class="btn btn-primary" onclick="confirmCanon()">🚀 Lancer le canon</button>
-    </div>
-  </div>
-</div>
+    <div style="display:flex;gap:8px;jus
