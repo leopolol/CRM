@@ -220,6 +220,16 @@ tr { cursor: pointer; }
 .badge-negative { background: rgba(160,82,45,0.10); color: #7a3b1e; }
 .badge-negative .badge-dot { background: #a0522d; }
 
+/* Badge Grand Compte */
+.badge-grand-compte {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: linear-gradient(135deg, #002f4b, #003d61);
+  color: #F6C13C; font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px; letter-spacing: 0.04em;
+  text-transform: uppercase; border: 1px solid rgba(246,193,60,0.4);
+  flex-shrink: 0;
+}
+
 .sector-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .sector-elec { background: rgba(0,47,75,0.10); color: var(--navy-mid); }
 .sector-med  { background: rgba(26,138,90,0.12); color: var(--green); }
@@ -645,7 +655,26 @@ const CONFIG = {
 }
 .switch-alert:hover { background:var(--yellow-dim); }
 
-/* Modal email picker */
+/* Canon modal */
+.canon-contact {
+  display:flex; align-items:center; gap:12px; padding:10px 14px;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius-sm); margin-bottom:8px;
+}
+.canon-order {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--navy); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; flex-shrink:0;
+}
+.canon-info { flex:1; min-width:0; }
+.canon-name  { font-size:13px; font-weight:600; color:var(--text); }
+.canon-email { font-size:11px; color:var(--text3); }
+.canon-delay {
+  font-size:11px; font-weight:600; color:var(--navy);
+  background:var(--navy-light); padding:2px 8px; border-radius:20px;
+}
+.canon-drag { cursor:grab; color:var(--text3); font-size:16px; padding:0 4px; }
 .email-picker-overlay {
   position:fixed; inset:0; background:rgba(0,20,35,0.6);
   z-index:300; display:none; align-items:center; justify-content:center;
@@ -726,10 +755,9 @@ const CONFIG = {
       <div class="panel-meta" id="panel-meta"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <button class="btn btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()"
-        style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">✏ Modifier</button>
-      <button class="btn btn-sm" onclick="deleteContact()"
-        style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">🗑 Supprimer</button>
+      <button class="btn btn-sm" id="grand-compte-btn" onclick="toggleGrandCompte()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">⭐ Grand compte</button>
+      <button class="btn btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">✏ Modifier</button>
+      <button class="btn btn-sm" onclick="deleteContact()" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff;">🗑 Supprimer</button>
       <button class="close-btn" onclick="closePanel()">✕</button>
     </div>
   </div>
@@ -1103,7 +1131,8 @@ function rowToArray(c) {
   return [c.id, c.company, c.specialite, c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
           c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]),
-          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[])];
+          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[]),
+          c.grandCompte ? '1' : ''];
 }
 
 // Bascule automatiquement les statuts selon la date J
@@ -1137,7 +1166,8 @@ async function syncFromSheets() {
       notes:   (() => { try { return JSON.parse(r.notes    || '[]'); } catch(e) { return []; } })(),
       linkedin:(() => { try { return JSON.parse(r.linkedin  || '[]'); } catch(e) { return []; } })(),
       seqDone: (() => { try { return JSON.parse(r.seqDone   || '[]'); } catch(e) { return []; } })(),
-      emails:  (() => { try { return JSON.parse(r.emails    || '[]'); } catch(e) { return []; } })(),
+      emails:      (() => { try { return JSON.parse(r.emails    || '[]'); } catch(e) { return []; } })(),
+      grandCompte: r.grandCompte === '1' || r.grandCompte === true,
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
     autoUpgradeStatuses();
@@ -1254,7 +1284,10 @@ function renderTable() {
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
     const na = getNextAction(c);
     return `<tr onclick="openPanel(${c.id})">
-      <td><div class="company-cell"><span class="company-name">${c.company}</span><span class="company-sub">${c.specialite||''}</span></div></td>
+      <td><div class="company-cell">
+        <span class="company-name">${c.company}${c.grandCompte?' <span class="badge-grand-compte">★ Grand</span>':''}</span>
+        <span class="company-sub">${c.specialite||''}</span>
+      </div></td>
       <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
       <td class="contact-cell">${c.contact||c.phone||c.email||'—'}</td>
       <td><span class="badge ${st.cls}"><span class="badge-dot"></span>${st.label}</span></td>
@@ -1377,7 +1410,24 @@ function openPanel(id) {
   const c = selectedContact;
   document.getElementById('panel-company-name').textContent = c.company;
   const sc = SECTOR_CLS[c.sector]||'sector-elec';
-  document.getElementById('panel-meta').innerHTML = `<span class="sector-badge ${sc}">${c.sector}</span><span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
+  document.getElementById('panel-meta').innerHTML =
+    `<span class="sector-badge ${sc}">${c.sector}</span>` +
+    (c.grandCompte ? `<span class="badge-grand-compte">★ Grand compte</span>` : '') +
+    `<span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
+
+  // Met à jour le bouton grand compte
+  const gcBtn = document.getElementById('grand-compte-btn');
+  if (c.grandCompte) {
+    gcBtn.style.background = 'var(--yellow)';
+    gcBtn.style.color      = 'var(--navy-dark)';
+    gcBtn.style.borderColor= 'var(--yellow-dark)';
+    gcBtn.textContent      = '★ Grand compte';
+  } else {
+    gcBtn.style.background = 'rgba(255,255,255,0.12)';
+    gcBtn.style.color      = '#fff';
+    gcBtn.style.borderColor= 'rgba(255,255,255,0.25)';
+    gcBtn.textContent      = '⭐ Grand compte';
+  }
   const days = daysSince(c.dateJ);
   const emails = c.emails || [];
   const nbSansReponse = emails.filter(e=>e.statut==='sans_reponse').length;
@@ -2170,21 +2220,24 @@ function deleteStep(i) {
 // ── Activer séquence sur un contact ─────────────────────────
 // ── Rendu tunnel dans le panel ───────────────────────────────
 function renderSequencePanel(c) {
-  const seqBtnGroup = document.getElementById('seq-btn-group');
-  const inSequence  = ['sequence','sent','followup'].includes(c.status);
-  const isTerminal  = ['replied','negative','pilote','noreply'].includes(c.status);
+  const seqBtnGroup    = document.getElementById('seq-btn-group');
+  const inSequence     = ['sequence','sent','followup'].includes(c.status);
+  const isTerminal     = ['replied','negative','pilote','noreply'].includes(c.status);
+  const hasMultiEmails = (c.emails||[]).filter(e=>e.email).length > 1;
 
-  // Boutons selon état
   if (isTerminal) {
     seqBtnGroup.innerHTML = `<span style="font-size:11px;color:var(--text3);">Tunnel terminé</span>`;
   } else if (inSequence) {
     seqBtnGroup.innerHTML = `
       <span style="font-size:11px;color:var(--green);font-weight:600;">▶ En séquence</span>
       <button class="btn btn-sm" onclick="deactivateSequence(${c.id})"
-        style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer du tunnel</button>`;
+        style="background:var(--red-dim);border-color:var(--red);color:var(--red);">✕ Retirer</button>`;
   } else {
-    seqBtnGroup.innerHTML = `
-      <button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Ajouter à la séquence</button>`;
+    seqBtnGroup.innerHTML =
+      (c.grandCompte && hasMultiEmails
+        ? `<button class="btn btn-sm btn-yellow" onclick="openCanon(${c.id})">🎯 Lancer en canon</button> `
+        : '') +
+      `<button class="btn btn-sm btn-primary" onclick="activateSequence(${c.id})">+ Séquence</button>`;
   }
 
   // Affiche les étapes du tunnel du secteur
@@ -2248,6 +2301,131 @@ async function deactivateSequence(contactId) {
   } catch(e) { saveRowToSheets(c); openPanel(c.id); renderAll(); }
 }
 
+// ════════════════════════════════════════════════════════════
+//  GRAND COMPTE
+// ════════════════════════════════════════════════════════════
+
+function toggleGrandCompte() {
+  if (!selectedContact) return;
+  const c = selectedContact;
+  c.grandCompte = !c.grandCompte;
+  saveRowToSheets(c);
+  openPanel(c.id);
+  renderAll();
+  renderKanban();
+}
+
+// ════════════════════════════════════════════════════════════
+//  CANON — lancement multi-contacts décalé
+// ════════════════════════════════════════════════════════════
+
+const CANON_DELAY = 7; // jours entre chaque contact
+let _canonContactId  = null;
+let _canonOrder      = []; // ordre des emails choisi
+
+function openCanon(contactId) {
+  const c = contacts.find(x => x.id === contactId);
+  if (!c) return;
+  if (!tunnels[c.sector] || !tunnels[c.sector].length)
+    return alert(`Aucun tunnel configuré pour "${c.sector}". Crée-le dans l'onglet Tunnels.`);
+
+  const emailOptions = getEmailsForPicker(c).filter(e => e.email);
+  if (emailOptions.length < 2)
+    return alert('Il faut au moins 2 contacts/emails dans la fiche pour utiliser le canon.');
+
+  _canonContactId = contactId;
+  _canonOrder     = emailOptions.map((e, i) => ({ ...e, startDelay: i * CANON_DELAY }));
+
+  renderCanonList();
+  document.getElementById('canon-overlay').classList.add('open');
+}
+
+function renderCanonList() {
+  const today = new Date();
+  document.getElementById('canon-contacts-list').innerHTML = _canonOrder.map((e, i) => {
+    const name     = e.prenom||e.nom ? `${e.prenom||''} ${e.nom||''}`.trim() : 'Adresse générique';
+    const initials = name !== 'Adresse générique' ? name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() : '@';
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + e.startDelay);
+    // Applique la règle vendredi/weekend pour J+1 depuis cette date
+    const j1 = new Date(startDate); j1.setDate(j1.getDate() + 1);
+    const day = j1.getDay();
+    if (day === 5) j1.setDate(j1.getDate() + 3);
+    if (day === 6) j1.setDate(j1.getDate() + 2);
+    if (day === 0) j1.setDate(j1.getDate() + 1);
+    const dateStr = j1.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+
+    return `<div class="canon-contact" id="canon-item-${i}" draggable="true"
+        ondragstart="canonDragStart(${i})" ondragover="event.preventDefault()"
+        ondrop="canonDrop(${i})">
+      <span class="canon-drag">⠿</span>
+      <div class="canon-order">${i+1}</div>
+      <div class="canon-info">
+        <div class="canon-name">${name}${e.poste?` <span style="color:var(--text3);font-size:11px;font-weight:400;">— ${e.poste}</span>`:''}</div>
+        <div class="canon-email">${e.email}</div>
+      </div>
+      <div class="canon-delay">
+        Premier mail<br>
+        <strong>${e.startDelay === 0 ? 'Demain' : `J+${e.startDelay} → ${dateStr}`}</strong>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _dragIdx = null;
+function canonDragStart(i) { _dragIdx = i; }
+function canonDrop(targetIdx) {
+  if (_dragIdx === null || _dragIdx === targetIdx) return;
+  const item = _canonOrder.splice(_dragIdx, 1)[0];
+  _canonOrder.splice(targetIdx, 0, item);
+  // Recalcule les délais
+  _canonOrder.forEach((e, i) => { e.startDelay = i * CANON_DELAY; });
+  renderCanonList();
+  _dragIdx = null;
+}
+
+function closeCanon() {
+  document.getElementById('canon-overlay').classList.remove('open');
+  _canonContactId = null;
+  _canonOrder     = [];
+}
+
+async function confirmCanon() {
+  const c = contacts.find(x => x.id === _canonContactId);
+  if (!c || !_canonOrder.length) return;
+  if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  closeCanon();
+
+  try {
+    // Lance un tunnel pour chaque contact avec la date J décalée
+    for (const entry of _canonOrder) {
+      const dateJ0 = new Date(today);
+      dateJ0.setDate(dateJ0.getDate() + entry.startDelay);
+      const dateStr = `${dateJ0.getFullYear()}-${String(dateJ0.getMonth()+1).padStart(2,'0')}-${String(dateJ0.getDate()).padStart(2,'0')}`;
+      const contactName = entry.prenom||entry.nom ? `${entry.prenom||''} ${entry.nom||''}`.trim() : '';
+
+      await fetch(CONFIG.WEBHOOK, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'activateSequence',
+          row: [c.id, c.company, entry.email, c.sector, dateStr, '', contactName]
+        })
+      });
+    }
+
+    c.status    = 'sequence';
+    c.grandCompte = true;
+    c.seqDone   = [];
+    saveRowToSheets(c);
+    setSyncStatus('ok', `Canon lancé — ${_canonOrder.length} tunnels activés pour ${c.company} ✓`);
+    openPanel(c.id);
+    renderAll();
+  } catch(err) {
+    alert('Erreur lors du lancement du canon : ' + err.message);
+  }
+}
 </script>
 <!-- EMAIL PICKER MODAL -->
 <div class="email-picker-overlay" id="email-picker-overlay">
@@ -2257,6 +2435,22 @@ async function deactivateSequence(contactId) {
     <div id="email-picker-list"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
       <button class="btn" onclick="closeEmailPicker()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- CANON MODAL -->
+<div class="email-picker-overlay" id="canon-overlay">
+  <div class="email-picker" style="width:520px;max-height:85vh;overflow-y:auto;">
+    <div class="email-picker-title">🎯 Lancement en canon</div>
+    <div class="email-picker-sub">Contacts contactés dans l'ordre avec 7 jours d'écart. Glisse pour réordonner.</div>
+    <div id="canon-contacts-list"></div>
+    <div style="background:var(--navy-light);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:12px;color:var(--navy);">
+      ⚡ <strong>Règle :</strong> Si un contact répond positivement, passe-le en "Répondu ✓" — le rapport du soir t'alertera sur les autres tunnels actifs de la même entreprise.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closeCanon()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmCanon()">🚀 Lancer le canon</button>
     </div>
   </div>
 </div>
