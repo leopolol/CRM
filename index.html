@@ -616,7 +616,63 @@ const CONFIG = {
 .li-delete { background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; padding:2px 4px; border-radius:3px; transition:color 0.15s; }
 .li-delete:hover { color:var(--red); }
 
-/* ── ANALYSES ── */
+/* ── EMAILS MULTI-CONTACTS ── */
+.email-entry {
+  display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto;
+  gap:6px; align-items:center; margin-bottom:6px;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:8px 10px;
+}
+.email-entry.sans-reponse { border-color:var(--red); background:var(--red-dim); }
+.email-entry.repondu      { border-color:var(--green); background:var(--green-dim); }
+.email-tag {
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:12px; padding:3px 8px; border-radius:20px;
+  font-weight:500; white-space:nowrap;
+}
+.email-tag.actif        { background:var(--accent-dim); color:var(--navy); }
+.email-tag.sans-reponse { background:var(--red-dim); color:var(--red); }
+.email-tag.repondu      { background:var(--green-dim); color:var(--green); }
+.email-tag.generique    { background:var(--bg4); color:var(--text2); }
+
+/* Badge alerte bascule */
+.switch-alert {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(246,193,60,0.15); border:1px solid rgba(246,193,60,0.4);
+  color:var(--yellow-dark); font-size:11px; font-weight:600;
+  padding:3px 8px; border-radius:20px; cursor:pointer;
+  transition:all 0.15s;
+}
+.switch-alert:hover { background:var(--yellow-dim); }
+
+/* Modal email picker */
+.email-picker-overlay {
+  position:fixed; inset:0; background:rgba(0,20,35,0.6);
+  z-index:300; display:none; align-items:center; justify-content:center;
+}
+.email-picker-overlay.open { display:flex; }
+.email-picker {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius); width:460px; max-width:95vw; padding:24px;
+}
+.email-picker-title { font-size:15px; font-weight:700; color:var(--navy); margin-bottom:6px; }
+.email-picker-sub   { font-size:12px; color:var(--text3); margin-bottom:18px; }
+.email-option {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  margin-bottom:8px; cursor:pointer; transition:all 0.15s;
+}
+.email-option:hover { border-color:var(--navy); background:var(--navy-light); }
+.email-option.selected { border-color:var(--navy); background:var(--navy-light); }
+.email-option-avatar {
+  width:34px; height:34px; border-radius:50%; background:var(--navy-light);
+  color:var(--navy); display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; flex-shrink:0;
+}
+.email-option-info { flex:1; min-width:0; }
+.email-option-name  { font-size:13px; font-weight:600; color:var(--text); }
+.email-option-email { font-size:11px; color:var(--text3); }
+.email-option-role  { font-size:11px; color:var(--text2); }
 .an-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 .an-bar-label { font-size:12px; color:var(--text2); width:140px; flex-shrink:0; }
 .an-bar-track { flex:1; background:var(--bg4); border-radius:4px; height:8px; overflow:hidden; }
@@ -694,12 +750,20 @@ const CONFIG = {
             </select>
           </div>
           <div><label class="form-label">Localisation</label><input class="form-input" id="edit-location" type="text"></div>
-          <div><label class="form-label">Interlocuteur</label><input class="form-input" id="edit-contact" type="text" placeholder="ex: Florence Bertrand"></div>
           <div><label class="form-label">Téléphone</label><input class="form-input" id="edit-phone" type="text" placeholder="ex: +33 6 12 34 56 78"></div>
-          <div style="grid-column:1/-1"><label class="form-label">Email</label><input class="form-input" id="edit-email" type="text"></div>
           <div><label class="form-label">Site web</label><input class="form-input" id="edit-site" type="text"></div>
           <div><label class="form-label">Date J</label><input class="form-input" id="edit-dateJ" type="date"></div>
         </div>
+
+        <!-- CONTACTS & EMAILS -->
+        <div style="margin-top:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <label class="form-label" style="margin:0;">Contacts & Emails</label>
+            <button class="btn btn-sm" onclick="addEmailEntry()">+ Ajouter</button>
+          </div>
+          <div id="edit-emails-list"></div>
+        </div>
+
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-sm" onclick="cancelEdit()">Annuler</button>
           <button class="btn btn-primary btn-sm" onclick="saveEdit()">💾 Enregistrer</button>
@@ -1038,7 +1102,8 @@ function setLoading(show, text='') {
 function rowToArray(c) {
   return [c.id, c.company, c.specialite, c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
-          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]), JSON.stringify(c.seqDone||[])];
+          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]),
+          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[])];
 }
 
 // Bascule automatiquement les statuts selon la date J
@@ -1072,6 +1137,7 @@ async function syncFromSheets() {
       notes:   (() => { try { return JSON.parse(r.notes    || '[]'); } catch(e) { return []; } })(),
       linkedin:(() => { try { return JSON.parse(r.linkedin  || '[]'); } catch(e) { return []; } })(),
       seqDone: (() => { try { return JSON.parse(r.seqDone   || '[]'); } catch(e) { return []; } })(),
+      emails:  (() => { try { return JSON.parse(r.emails    || '[]'); } catch(e) { return []; } })(),
     }));
     nextId = contacts.length ? Math.max(...contacts.map(c => c.id)) + 1 : 100;
     autoUpgradeStatuses();
@@ -1205,13 +1271,20 @@ function renderTable2() {
   tbody.innerHTML = data.map(c => {
     const st = STATUSES.find(s=>s.key===c.status)||STATUSES[0];
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
-    const emailCell = c.email
-      ? `<a href="mailto:${c.email}" onclick="event.stopPropagation()" style="color:var(--navy)">${c.email}</a>`
-      : `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--red-dim);color:var(--red);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--red);">⚠ Email manquant</span>`;
+    const emails = c.emails || [];
+    const firstNamed = emails.find(e=>e.nom||e.prenom);
+    const firstEmail = emails[0];
+    const hasAnyEmail = firstEmail?.email || c.email;
+    const emailCell = !hasAnyEmail
+      ? `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--red-dim);color:var(--red);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--red);">⚠ Email manquant</span>`
+      : emails.length > 1
+        ? `<span style="font-size:12px;color:var(--text2);">${emails.length} contacts</span>`
+        : `<a href="mailto:${firstEmail?.email||c.email}" onclick="event.stopPropagation()" style="color:var(--navy);font-size:12px;">${firstEmail?.email||c.email}</a>`;
+    const contactName = firstNamed ? `${firstNamed.prenom||''} ${firstNamed.nom||''}`.trim() : (c.contact||'—');
     return `<tr onclick="openPanel(${c.id})">
       <td><span class="company-name">${c.company}</span></td>
       <td><span class="sector-badge ${sc}">${c.sector.split(' ')[0]}</span></td>
-      <td class="contact-cell">${c.contact||'—'}</td>
+      <td class="contact-cell">${contactName}</td>
       <td class="contact-cell">${c.phone?`<a href="tel:${c.phone}" onclick="event.stopPropagation()">${c.phone}</a>`:'—'}</td>
       <td class="contact-cell">${emailCell}</td>
       <td class="contact-cell">${c.site?`<a href="https://${c.site}" target="_blank" onclick="event.stopPropagation()">${c.site}</a>`:'—'}</td>
@@ -1306,14 +1379,45 @@ function openPanel(id) {
   const sc = SECTOR_CLS[c.sector]||'sector-elec';
   document.getElementById('panel-meta').innerHTML = `<span class="sector-badge ${sc}">${c.sector}</span><span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
   const days = daysSince(c.dateJ);
+  const emails = c.emails || [];
+  const nbSansReponse = emails.filter(e=>e.statut==='sans_reponse').length;
+  const autresEmails  = emails.filter(e=>e.statut!=='sans_reponse' && e.statut!=='actif_tunnel');
+
+  // Badge alerte bascule si 3+ mails envoyés sans réponse
+  const seqDoneCount = (c.seqDone||[]).length;
+  const showSwitchAlert = seqDoneCount >= 3 && autresEmails.length > 0 && ['sequence','sent','followup'].includes(c.status);
+
   document.getElementById('panel-info-grid').innerHTML = `
     <div class="info-item full"><div class="info-label">Spécialité</div><div class="info-value">${c.specialite||'—'}</div></div>
     <div class="info-item"><div class="info-label">Localisation</div><div class="info-value">${c.location||'—'}</div></div>
     <div class="info-item"><div class="info-label">Date J</div><div class="info-value">${c.dateJ?fmtDate(new Date(c.dateJ))+(days!==null?` (J+${days})`:''): '—'}</div></div>
-    <div class="info-item"><div class="info-label">Interlocuteur</div><div class="info-value">${c.contact||'—'}</div></div>
     <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div></div>
-    <div class="info-item full"><div class="info-label">Email</div><div class="info-value">${c.email?`<a href="mailto:${c.email}">${c.email}</a>`:'—'}</div></div>
-    <div class="info-item full"><div class="info-label">Site</div><div class="info-value">${c.site?`<a href="https://${c.site}" target="_blank">${c.site}</a>`:'—'}</div></div>`;
+    <div class="info-item"><div class="info-label">Site</div><div class="info-value">${c.site?`<a href="https://${c.site}" target="_blank">${c.site}</a>`:'—'}</div></div>
+    <div class="info-item full">
+      <div class="info-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Contacts & Emails
+        ${showSwitchAlert ? `<span class="switch-alert" onclick="openEmailPicker(${c.id}, true)">💡 Basculer vers un autre email</span>` : ''}
+      </div>
+      <div style="margin-top:6px;">
+        ${emails.length === 0 ? '<span style="color:var(--text3);font-size:12px;">Aucun email — modifier la fiche</span>' :
+          emails.map((e,i) => {
+            const label = e.nom ? `${e.prenom||''} ${e.nom}`.trim() : (e.label||'Générique');
+            const statut = e.statut||'actif';
+            const isTunnel = e.statut === 'actif_tunnel';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--text);">${label}${e.poste?` <span style="color:var(--text3);font-weight:400;">— ${e.poste}</span>`:''}${isTunnel?` <span class="email-tag actif">▶ Tunnel actif</span>`:''}</div>
+                <div style="font-size:11px;color:${statut==='sans_reponse'?'var(--red)':statut==='repondu'?'var(--green)':'var(--text2)'};">
+                  ${e.email}
+                  ${statut==='sans_reponse'?` <span style="color:var(--red)">— Sans réponse</span>`:''}
+                  ${statut==='repondu'?` <span style="color:var(--green)">— A répondu ✓</span>`:''}
+                </div>
+              </div>
+              <a href="mailto:${e.email}" onclick="event.stopPropagation()" style="font-size:16px;text-decoration:none;opacity:0.6;" title="Envoyer un email">✉</a>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>`;
   document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s=>`
     <button class="status-option ${c.status===s.key?'selected':''}" data-action="setstatus" data-key="${s.key}">${s.label}</button>`).join('');
 
@@ -1374,11 +1478,10 @@ function toggleEditMode() {
   document.getElementById('edit-specialite').value = c.specialite||'';
   document.getElementById('edit-sector').value     = c.sector||'Électronique industrielle';
   document.getElementById('edit-location').value   = c.location||'';
-  document.getElementById('edit-contact').value    = c.contact||'';
   document.getElementById('edit-phone').value      = c.phone||'';
-  document.getElementById('edit-email').value      = c.email||'';
   document.getElementById('edit-site').value       = c.site||'';
   document.getElementById('edit-dateJ').value      = c.dateJ||'';
+  renderEditEmails(c.emails||[]);
   form.style.display='block'; view.style.display='none';
   btn.textContent='✕ Annuler';
   btn.style.cssText='background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.25);';
@@ -1398,11 +1501,16 @@ function saveEdit() {
   c.specialite = document.getElementById('edit-specialite').value.trim();
   c.sector     = document.getElementById('edit-sector').value;
   c.location   = document.getElementById('edit-location').value.trim();
-  c.contact    = document.getElementById('edit-contact').value.trim();
   c.phone      = document.getElementById('edit-phone').value.trim();
-  c.email      = document.getElementById('edit-email').value.trim();
   c.site       = document.getElementById('edit-site').value.trim();
   c.dateJ      = document.getElementById('edit-dateJ').value||'';
+  // Collecte les emails depuis le formulaire
+  c.emails = collectEmailsFromForm();
+  // Rétrocompatibilité : premier email nommé → contact, premier email → email
+  const firstNamed = c.emails.find(e=>e.nom);
+  const firstEmail = c.emails[0];
+  c.contact = firstNamed ? `${firstNamed.prenom||''} ${firstNamed.nom}`.trim() : '';
+  c.email   = firstEmail ? firstEmail.email : '';
   saveRowToSheets(c);
   openPanel(c.id);
   renderAll();
@@ -1726,6 +1834,178 @@ function renderAnalyses() {
 renderAll();
 
 // ════════════════════════════════════════════════════════════
+
+// Rendu de la liste d'emails dans le formulaire d'édition
+function renderEditEmails(emails) {
+  const list = document.getElementById('edit-emails-list');
+  // Migre l'ancien format si emails vide mais contact/email présents
+  if (!emails.length && selectedContact) {
+    if (selectedContact.email) {
+      emails = [{
+        nom: selectedContact.contact ? selectedContact.contact.split(' ').slice(1).join(' ') : '',
+        prenom: selectedContact.contact ? selectedContact.contact.split(' ')[0] : '',
+        poste: '', email: selectedContact.email, label:'', statut:'actif'
+      }];
+    }
+  }
+
+  list.innerHTML = emails.map((e, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);">
+      <input class="form-input" style="font-size:12px;padding:5px 8px;" placeholder="Prénom" value="${e.prenom||''}" data-idx="${i}" data-field="prenom">
+      <input class="form-input" style="font-size:12px;padding:5px 8px;" placeholder="Nom" value="${e.nom||''}" data-idx="${i}" data-field="nom">
+      <input class="form-input" style="font-size:12px;padding:5px 8px;" placeholder="Poste" value="${e.poste||''}" data-idx="${i}" data-field="poste">
+      <input class="form-input" style="font-size:12px;padding:5px 8px;" placeholder="Email *" value="${e.email||''}" data-idx="${i}" data-field="email">
+      <button onclick="removeEmailEntry(${i})" style="background:var(--red-dim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;">✕</button>
+    </div>`).join('') ||
+    `<div style="font-size:12px;color:var(--text3);padding:8px 0;">Aucun email — clique sur "+ Ajouter"</div>`;
+}
+
+function addEmailEntry() {
+  const c = selectedContact;
+  if (!c.emails) c.emails = [];
+  // Migre si nécessaire
+  if (!c.emails.length && c.email) {
+    c.emails.push({ prenom: c.contact?c.contact.split(' ')[0]:'', nom: c.contact?c.contact.split(' ').slice(1).join(' '):'', poste:'', email:c.email, statut:'actif' });
+  }
+  c.emails.push({ prenom:'', nom:'', poste:'', email:'', statut:'actif' });
+  renderEditEmails(c.emails);
+}
+
+function removeEmailEntry(i) {
+  const c = selectedContact;
+  if (!c.emails) return;
+  c.emails.splice(i, 1);
+  renderEditEmails(c.emails);
+}
+
+function collectEmailsFromForm() {
+  const inputs = document.querySelectorAll('#edit-emails-list [data-idx]');
+  const map = {};
+  inputs.forEach(input => {
+    const idx   = input.dataset.idx;
+    const field = input.dataset.field;
+    if (!map[idx]) map[idx] = { prenom:'', nom:'', poste:'', email:'', statut:'actif' };
+    map[idx][field] = input.value.trim();
+  });
+  return Object.values(map).filter(e => e.email);
+}
+
+// Récupère tous les emails d'un contact pour le picker
+function getEmailsForPicker(c) {
+  const emails = c.emails || [];
+  const result = [];
+  // Migre si pas encore de emails[]
+  if (!emails.length && c.email) {
+    result.push({ prenom: c.contact?c.contact.split(' ')[0]:'', nom: c.contact?c.contact.split(' ').slice(1).join(' '):'', poste:'', email:c.email, statut:'actif', label:'' });
+  }
+  emails.forEach(e => { if (e.email) result.push(e); });
+  return result;
+}
+
+// ── EMAIL PICKER (sélection au démarrage du tunnel) ──────────
+let _pickerContactId = null;
+let _pickerIsSwitchMode = false;
+
+function openEmailPicker(contactId, isSwitchMode = false) {
+  const c = contacts.find(x => x.id === contactId);
+  if (!c) return;
+
+  if (!tunnels[c.sector] || !tunnels[c.sector].length)
+    return alert(`Aucun tunnel configuré pour "${c.sector}".\nCrée-le dans l'onglet Tunnels.`);
+
+  const emailOptions = getEmailsForPicker(c).filter(e => e.statut !== 'sans_reponse');
+  if (!emailOptions.length) return alert('Aucun email disponible sur cette fiche.');
+
+  _pickerContactId   = contactId;
+  _pickerIsSwitchMode = isSwitchMode;
+
+  const title = isSwitchMode ? 'Basculer le tunnel vers un autre email' : 'Choisir l\'email pour le tunnel';
+  const sub   = isSwitchMode
+    ? '3 mails envoyés sans réponse — choisis un autre interlocuteur'
+    : 'Quel email utiliser pour démarrer la séquence de prospection ?';
+
+  document.querySelector('.email-picker-title').textContent = title;
+  document.querySelector('.email-picker-sub').textContent   = sub;
+
+  document.getElementById('email-picker-list').innerHTML = emailOptions.map((e, i) => {
+    const name     = e.prenom||e.nom ? `${e.prenom||''} ${e.nom||''}`.trim() : 'Adresse générique';
+    const initials = name !== 'Adresse générique' ? name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() : '@';
+    return `<div class="email-option" onclick="selectEmailForTunnel(${i})" data-idx="${i}">
+      <div class="email-option-avatar">${initials}</div>
+      <div class="email-option-info">
+        <div class="email-option-name">${name}</div>
+        ${e.poste ? `<div class="email-option-role">${e.poste}</div>` : ''}
+        <div class="email-option-email">${e.email}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Stocke les options pour la sélection
+  document.getElementById('email-picker-list').dataset.options = JSON.stringify(emailOptions);
+  document.getElementById('email-picker-overlay').classList.add('open');
+}
+
+function closeEmailPicker() {
+  document.getElementById('email-picker-overlay').classList.remove('open');
+  _pickerContactId   = null;
+  _pickerIsSwitchMode = false;
+}
+
+async function selectEmailForTunnel(optionIdx) {
+  const c = contacts.find(x => x.id === _pickerContactId);
+  if (!c) return;
+  const options = JSON.parse(document.getElementById('email-picker-list').dataset.options || '[]');
+  const chosen  = options[optionIdx];
+  if (!chosen) return;
+
+  closeEmailPicker();
+
+  if (_pickerIsSwitchMode) {
+    // Mode bascule : marque l'email actuel comme sans_réponse + démarre sur le nouveau
+    if (c.emails) {
+      c.emails.forEach(e => { if (e.statut === 'actif_tunnel') e.statut = 'sans_reponse'; });
+      const newEntry = c.emails.find(e => e.email === chosen.email);
+      if (newEntry) newEntry.statut = 'actif_tunnel';
+    }
+  }
+
+  await doActivateSequence(c, chosen);
+}
+
+async function doActivateSequence(c, emailEntry) {
+  if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
+
+  // Marque l'email choisi comme tunnel actif
+  if (c.emails) {
+    c.emails.forEach(e => { if (e.email === emailEntry.email) e.statut = 'actif_tunnel'; });
+  }
+
+  c.dateJ   = fmtDateInput(today);
+  c.status  = 'sequence';
+  c.seqDone = [];
+
+  const contactName = emailEntry.prenom || emailEntry.nom
+    ? `${emailEntry.prenom||''} ${emailEntry.nom||''}`.trim()
+    : '';
+
+  try {
+    await fetch(CONFIG.WEBHOOK, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'activateSequence',
+        row: [c.id, c.company, emailEntry.email, c.sector, c.dateJ, '', contactName]
+      })
+    });
+    saveRowToSheets(c);
+    setSyncStatus('ok', `${c.company} → séquence activée sur ${emailEntry.email} ✓`);
+    openPanel(c.id);
+    renderAll();
+  } catch(e) { alert('Erreur activation séquence'); }
+}
+
+
+
+// ════════════════════════════════════════════════════════════
 //  TUNNELS
 // ════════════════════════════════════════════════════════════
 
@@ -1936,31 +2216,19 @@ function renderSequencePanel(c) {
 async function activateSequence(contactId) {
   const c = contacts.find(x=>x.id===contactId);
   if (!c) return;
-  if (!c.email) return alert('Email manquant — impossible d\'activer la séquence.');
   if (!tunnels[c.sector] || !tunnels[c.sector].length)
     return alert(`Aucun tunnel configuré pour "${c.sector}".\nCrée-le dans l'onglet Tunnels.`);
-  if (!CONFIG.WEBHOOK) return alert('Google Sheets non configuré.');
 
-  // Date J = aujourd'hui
-  c.dateJ  = fmtDateInput(today);
-  c.status = 'sequence';
-  c.seqDone = [];
+  const emailOptions = getEmailsForPicker(c);
+  if (!emailOptions.length) return alert('Aucun email renseigné sur cette fiche — modifie la fiche d\'abord.');
 
-  try {
-    // Inscrit dans SEQUENCES (contact + date J + contact name pour variable)
-    await fetch(CONFIG.WEBHOOK, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'activateSequence',
-        row: [c.id, c.company, c.email, c.sector, c.dateJ, '', c.contact||'']
-      })
-    });
-    // Sauvegarde le statut dans CRM
-    saveRowToSheets(c);
-    setSyncStatus('ok', `${c.company} ajouté à la séquence ✓`);
-    openPanel(c.id);
-    renderAll();
-  } catch(e) { alert('Erreur activation séquence'); }
+  if (emailOptions.length === 1) {
+    // Un seul email → pas besoin du picker
+    await doActivateSequence(c, emailOptions[0]);
+  } else {
+    // Plusieurs emails → ouvre le picker
+    openEmailPicker(contactId, false);
+  }
 }
 
 async function deactivateSequence(contactId) {
@@ -1981,5 +2249,14 @@ async function deactivateSequence(contactId) {
 }
 
 </script>
-</body>
-</html>
+<!-- EMAIL PICKER MODAL -->
+<div class="email-picker-overlay" id="email-picker-overlay">
+  <div class="email-picker">
+    <div class="email-picker-title">Choisir l'adresse email</div>
+    <div class="email-picker-sub">Quel email utiliser pour démarrer le tunnel de prospection ?</div>
+    <div id="email-picker-list"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closeEmailPicker()">Annuler</button>
+    </div>
+  </div>
+</div>
