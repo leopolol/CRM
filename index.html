@@ -45,44 +45,10 @@
 
 body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
 
-/* ── LOGIN ── */
-#login-screen {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; background: var(--navy);
-}
-.login-card {
-  background: #fff; border-radius: 16px; padding: 40px 36px; width: 360px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-.login-logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); }
-.login-logo-text { font-size: 20px; font-weight: 700; color: var(--navy); }
-.login-label { display: block; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.login-input {
-  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border2); background: var(--bg3);
-  color: var(--text); font-size: 14px; font-family: var(--font); outline: none;
-  margin-bottom: 14px; transition: border-color 0.15s;
-}
-.login-input:focus { border-color: var(--navy); }
-.login-btn {
-  width: 100%; padding: 11px; border-radius: var(--radius-sm);
-  background: var(--navy); color: #fff; border: none;
-  font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font);
-  transition: background 0.15s; margin-top: 4px;
-}
-.login-btn:hover { background: var(--navy-mid); }
-.login-error { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
-.login-setup-hint {
-  margin-top: 20px; padding: 12px 14px;
-  background: var(--navy-light); border-radius: var(--radius-sm);
-  font-size: 11px; color: var(--text2); line-height: 1.6;
-}
-.login-setup-hint strong { color: var(--navy); }
 
-/* ── APP (hidden until logged in) ── */
-#app { display: none; }
-#app.visible { display: flex; min-height: 100vh; }
+
+/* ── APP ── */
+#app { display: flex; min-height: 100vh; }
 
 /* ── SIDEBAR ── */
 .sidebar {
@@ -207,10 +173,6 @@ tr { cursor: pointer; }
 .badge-todo .badge-dot { background: var(--text3); }
 .badge-sequence { background: rgba(0,47,75,0.10); color: var(--navy); }
 .badge-sequence .badge-dot { background: var(--navy); }
-.badge-sent     { background: var(--blue-dim); color: var(--blue); }
-.badge-sent .badge-dot { background: var(--blue); }
-.badge-followup { background: var(--amber-dim); color: var(--amber); }
-.badge-followup .badge-dot { background: var(--amber); }
 .badge-replied  { background: var(--green-dim); color: var(--green); }
 .badge-replied .badge-dot { background: var(--green); }
 .badge-pilote   { background: var(--yellow-dim); color: var(--yellow-dark); }
@@ -411,27 +373,8 @@ const CONFIG = {
 <!-- ══════════════════════════════════════════════════ -->
 
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="login-logo-dot"></div>
-      <div class="login-logo-text">Stelneo CRM</div>
-    </div>
-    <label class="login-label">Mot de passe</label>
-    <input class="login-input" type="password" id="login-pw" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Accéder au CRM</button>
-    <div class="login-error" id="login-error">Mot de passe incorrect</div>
-    <div class="login-setup-hint" id="setup-hint" style="display:none">
-      <strong>⚙️ Configuration requise</strong><br>
-      Ouvre ce fichier HTML, remplace <code>WEBHOOK</code> par ton URL Apps Script.<br>
-      Voir le guide fourni avec ce fichier.
-    </div>
-  </div>
-</div>
-
 <!-- APP -->
-<div id="app">
+<div id="app" style="display:flex;min-height:100vh;">
 
   <!-- LOADING -->
   <div class="loading-overlay" id="loading" style="display:none">
@@ -444,17 +387,14 @@ const CONFIG = {
     <div class="logo"><div class="logo-dot"></div>Stelneo CRM</div>
     <button class="nav-item active" onclick="showPage('pipeline')" id="nav-pipeline"><span class="nav-icon">⚡</span> Pipeline</button>
     <button class="nav-item" onclick="showPage('contacts')" id="nav-contacts"><span class="nav-icon">◉</span> Contacts</button>
+        <button class="nav-item" onclick="showPage('tunnels')" id="nav-tunnels"><span class="nav-icon">✉</span> Tunnels</button>
     <button class="nav-item" onclick="showPage('kanban')" id="nav-kanban"><span class="nav-icon">▦</span> Kanban</button>
-    <button class="nav-item" onclick="showPage('tunnels')" id="nav-tunnels"><span class="nav-icon">✉</span> Tunnels</button>
     <button class="nav-item" onclick="showPage('analyses')" id="nav-analyses"><span class="nav-icon">◈</span> Analyses</button>
-    <div class="sidebar-bottom">
+        <div class="sidebar-bottom">
       <div class="sync-status">
         <div class="sync-dot" id="sync-dot"></div>
         <span id="sync-label">Connecté</span>
       </div>
-      <button class="nav-item" onclick="doLogout()" style="margin-top:4px;">
-        <span class="nav-icon">↩</span> Déconnexion
-      </button>
     </div>
   </nav>
 
@@ -485,19 +425,17 @@ const CONFIG = {
         </div>
         <div class="stats-row">
           <div class="stat-card"><div class="stat-label">Total contacts</div><div class="stat-value" id="stat-total">0</div><div class="stat-sub">en prospection</div></div>
-          <div class="stat-card"><div class="stat-label">Relances à faire</div><div class="stat-value stat-amber" id="stat-followup">0</div><div class="stat-sub">J+6 · J+12</div></div>
           <div class="stat-card"><div class="stat-label">Réponses reçues</div><div class="stat-value stat-green" id="stat-replied">0</div><div class="stat-sub">contacts actifs</div></div>
           <div class="stat-card"><div class="stat-label">Pilotes</div><div class="stat-value stat-blue" id="stat-pilote">0</div><div class="stat-sub">objectif : 3</div></div>
         </div>
         <div class="filters">
           <input type="text" class="search-box" placeholder="🔍  Rechercher..." id="search-pipeline" oninput="renderTable()">
-          <button class="filter-chip active" id="filter-all"      onclick="setStatusFilter('all')">Tous</button>
-          <button class="filter-chip" id="filter-todo"     onclick="setStatusFilter('todo')">À contacter</button>
-          <button class="filter-chip" id="filter-sequence" onclick="setStatusFilter('sequence')">En séquence</button>
-          <button class="filter-chip" id="filter-sent"     onclick="setStatusFilter('sent')">J+1 envoyé</button>
-          <button class="filter-chip" id="filter-followup" onclick="setStatusFilter('followup')">En relance</button>
-          <button class="filter-chip" id="filter-replied"  onclick="setStatusFilter('replied')">Répondu</button>
-          <button class="filter-chip" id="filter-pilote"   onclick="setStatusFilter('pilote')">Pilote</button>
+          <button class="filter-chip active" id="filter-all"       onclick="setStatusFilter('all')">Tous</button>
+          <button class="filter-chip" id="filter-todo"      onclick="setStatusFilter('todo')">À contacter</button>
+          <button class="filter-chip" id="filter-contact"   onclick="setStatusFilter('contact')">En contact</button>
+          <button class="filter-chip" id="filter-replied"   onclick="setStatusFilter('replied')">Réponse ✓</button>
+          <button class="filter-chip" id="filter-negative"  onclick="setStatusFilter('negative')">Réponse ✗</button>
+          <button class="filter-chip" id="filter-noreply"   onclick="setStatusFilter('noreply')">Sans réponse</button>
         </div>
         <div class="table-wrap">
           <table><thead><tr>
@@ -506,7 +444,6 @@ const CONFIG = {
             <th>Contact</th>
             <th onclick="sortBy('status')">Statut</th>
             <th>Prochaine action</th>
-            <th>Notes</th>
           </tr></thead><tbody id="contacts-tbody"></tbody></table>
         </div>
       </div>
@@ -519,15 +456,10 @@ const CONFIG = {
         <div class="table-wrap">
           <table><thead><tr>
             <th>Entreprise</th><th>Secteur</th><th>Interlocuteur</th>
-            <th>Téléphone</th><th>Email</th><th>Site</th><th>Statut</th>
+            <th>Téléphone</th><th>Email</th><th>Statut</th>
           </tr></thead><tbody id="contacts-tbody2"></tbody></table>
         </div>
-      </div>
-
-      <!-- AGENDA -->
-      <div class="page" id="page-agenda">
-        <div class="agenda" id="agenda-list"></div>
-      </div>
+      </div>      </div>
 
       <!-- KANBAN -->
       <div class="page" id="page-kanban">
@@ -645,15 +577,7 @@ const CONFIG = {
 .email-tag.repondu      { background:var(--green-dim); color:var(--green); }
 .email-tag.generique    { background:var(--bg4); color:var(--text2); }
 
-/* Badge alerte bascule */
-.switch-alert {
-  display:inline-flex; align-items:center; gap:5px;
-  background:rgba(246,193,60,0.15); border:1px solid rgba(246,193,60,0.4);
-  color:var(--yellow-dark); font-size:11px; font-weight:600;
-  padding:3px 8px; border-radius:20px; cursor:pointer;
-  transition:all 0.15s;
-}
-.switch-alert:hover { background:var(--yellow-dim); }
+
 
 /* Canon modal */
 .canon-contact {
@@ -768,7 +692,6 @@ const CONFIG = {
       <div class="notes-block" style="padding:14px;background:var(--bg3);">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div style="grid-column:1/-1"><label class="form-label">Entreprise</label><input class="form-input" id="edit-company" type="text"></div>
-          <div style="grid-column:1/-1"><label class="form-label">Spécialité</label><input class="form-input" id="edit-specialite" type="text"></div>
           <div><label class="form-label">Secteur</label>
             <select class="form-input" id="edit-sector">
               <option value="Électronique industrielle">Électronique industrielle</option>
@@ -778,8 +701,6 @@ const CONFIG = {
           </div>
           <div><label class="form-label">Localisation</label><input class="form-input" id="edit-location" type="text"></div>
           <div><label class="form-label">Téléphone</label><input class="form-input" id="edit-phone" type="text" placeholder="ex: +33 6 12 34 56 78"></div>
-          <div><label class="form-label">Site web</label><input class="form-input" id="edit-site" type="text"></div>
-          <div><label class="form-label">Date J</label><input class="form-input" id="edit-dateJ" type="date"></div>
         </div>
 
         <!-- CONTACTS & EMAILS -->
@@ -819,27 +740,12 @@ const CONFIG = {
       <div class="sequence-block" id="panel-sequence"></div>
     </div>
 
-    <!-- LINKEDIN -->
-    <div>
-      <div class="section-label">LinkedIn</div>
-      <div class="li-block" id="panel-linkedin"></div>
-    </div>
-
     <!-- NOTES -->
     <div>
       <div class="section-label">Notes</div>
       <div class="notes-block">
         <div class="notes-title"><span>Ajouter une note</span></div>
-        <div class="note-prompts">
-          <button class="note-prompt" onclick="insertPrompt('Réponse reçue : ')">📨 Réponse</button>
-          <button class="note-prompt" onclick="insertPrompt('Objection : ')">⚡ Objection</button>
-          <button class="note-prompt" onclick="insertPrompt('RDV planifié le ')">📅 RDV</button>
-          <button class="note-prompt" onclick="insertPrompt('Intérêt pour : ')">✓ Intérêt</button>
-          <button class="note-prompt" onclick="insertPrompt('Frein identifié : ')">⚠ Frein</button>
-          <button class="note-prompt" onclick="insertPrompt('Contact recommandé : ')">👤 Reco</button>
-          <button class="note-prompt" onclick="insertPrompt('À relancer le ')">🔁 Rappel</button>
-        </div>
-        <textarea class="note-textarea" id="note-input" placeholder="Tape ou choisis un modèle ci-dessus…"></textarea>
+        <textarea class="note-textarea" id="note-input" placeholder="Ajouter une note…"></textarea>
         <div class="note-save-row">
           <button class="btn btn-primary btn-sm" onclick="saveNote()">Enregistrer</button>
         </div>
@@ -872,15 +778,11 @@ const CONFIG = {
     <div class="form-row">
       <label class="form-label">Statut initial</label>
       <select class="form-input" id="import-status">
-        <option value="sent">J envoyé (mail déjà parti)</option>
         <option value="todo">À contacter</option>
-        <option value="followup">Relance J+6</option>
+        <option value="sequence">En contact (séquence active)</option>
       </select>
     </div>
-    <div class="form-row">
-      <label class="form-label">Date J (date du premier mail)</label>
-      <input type="date" class="form-input" id="import-date">
-    </div>
+
     <div class="form-row">
       <label class="form-label">Liste des entreprises *</label>
       <textarea class="form-input" id="import-text" rows="10" placeholder="ISEM&#10;CMD Électronique&#10;SERMA Technologies | Médical | Mérignac&#10;TEMSEGA | Médical | Pessac | contact@temsega.fr&#10;TDM Ingénierie | Aéronautique | Florence Bertrand | 05 56 ..."></textarea>
@@ -899,7 +801,6 @@ const CONFIG = {
 
 function openImport() {
   document.getElementById('import-overlay').classList.add('open');
-  document.getElementById('import-date').value = fmtDateInput(new Date());
   document.getElementById('import-preview').style.display='none';
 }
 function closeImport() { document.getElementById('import-overlay').classList.remove('open'); }
@@ -915,7 +816,6 @@ function parseImportLines() {
   const raw   = document.getElementById('import-text').value;
   const defSector = document.getElementById('import-sector').value;
   const defStatus = document.getElementById('import-status').value;
-  const defDate   = document.getElementById('import-date').value;
   const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
   return lines.map(line => {
     const parts = line.split('|').map(p=>p.trim());
@@ -934,7 +834,7 @@ function parseImportLines() {
       if (!contact)  { contact  = p; return; }
       specialite = p;
     });
-    return { company, sector, location, contact, phone, email, site, specialite, status: defStatus, dateJ: defDate, notes:[] };
+    return { company, sector, location, contact, phone, email, site:'', specialite:'', status: defStatus, dateJ:'', notes:[] };
   }).filter(Boolean);
 }
 
@@ -982,7 +882,6 @@ function doImport() {
   <div class="modal">
     <div class="modal-title">Nouveau contact</div>
     <div class="form-row"><label class="form-label">Entreprise *</label><input type="text" class="form-input" id="f-company" placeholder="ex: TDM Ingénierie"></div>
-    <div class="form-row"><label class="form-label">Spécialité</label><input type="text" class="form-input" id="f-specialite"></div>
     <div class="form-row"><label class="form-label">Secteur *</label>
       <select class="form-input" id="f-sector">
         <option value="Électronique industrielle">Électronique industrielle</option>
@@ -994,8 +893,6 @@ function doImport() {
     <div class="form-row"><label class="form-label">Interlocuteur</label><input type="text" class="form-input" id="f-contact" placeholder="ex: Florence Bertrand (Dir. Ops)"></div>
     <div class="form-row"><label class="form-label">Téléphone</label><input type="text" class="form-input" id="f-phone" placeholder="ex: +33 6 ..."></div>
     <div class="form-row"><label class="form-label">Email</label><input type="text" class="form-input" id="f-email"></div>
-    <div class="form-row"><label class="form-label">Site web</label><input type="text" class="form-input" id="f-site"></div>
-    <div class="form-row"><label class="form-label">Date J (premier contact)</label><input type="date" class="form-input" id="f-date"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Annuler</button>
       <button class="btn btn-primary" onclick="addContact()">Ajouter</button>
@@ -1009,15 +906,15 @@ function doImport() {
 // ════════════════════════════════════════════════════════════
 
 const STATUSES = [
-  { key:'todo',      label:'À contacter',    cls:'badge-todo' },
-  { key:'sequence',  label:'En séquence ▶',  cls:'badge-sequence' },
-  { key:'sent',      label:'J+1 envoyé',     cls:'badge-sent' },
-  { key:'followup',  label:'En relance',     cls:'badge-followup' },
-  { key:'replied',   label:'Répondu ✓',      cls:'badge-replied' },
-  { key:'negative',  label:'Réponse négative', cls:'badge-negative' },
-  { key:'pilote',    label:'Pilote 🎯',      cls:'badge-pilote' },
-  { key:'noreply',   label:'Sans réponse',   cls:'badge-noreply' },
+  { key:'todo',     label:'À contacter',  cls:'badge-todo' },
+  { key:'sequence', label:'En contact ▶', cls:'badge-sequence' },
+  { key:'replied',  label:'Réponse ✓',   cls:'badge-replied' },
+  { key:'pilote',   label:'Pilote 🎯',   cls:'badge-pilote' },
+  { key:'negative', label:'Réponse ✗',   cls:'badge-negative' },
+  { key:'noreply',  label:'Sans réponse', cls:'badge-noreply' },
 ];
+// Statuts "en contact" (séquence active)
+const IN_CONTACT = ['sequence','sent','followup'];
 
 const SECTOR_CLS = {
   'Électronique industrielle': 'sector-elec',
@@ -1026,15 +923,7 @@ const SECTOR_CLS = {
   'Aéronautique / Défense':    'sector-aero',
 };
 
-const SEQ_STEPS = [
-  { day:'J',    offset:0,  label:'Premier mail personnalisé',      channel:'mail' },
-  { day:'J',    offset:0,  label:'Visite silencieuse LinkedIn',     channel:'linkedin' },
-  { day:'J+2',  offset:2,  label:'Demande de connexion (sans note)',channel:'linkedin' },
-  { day:'J+4',  offset:4,  label:'Message LinkedIn si connecté',    channel:'linkedin' },
-  { day:'J+6',  offset:6,  label:'Relance mail — angle RSE',        channel:'mail' },
-  { day:'J+10', offset:10, label:'Dernier message LinkedIn',        channel:'linkedin' },
-  { day:'J+12', offset:12, label:'Mail de clôture — porte ouverte', channel:'mail' },
-];
+
 
 // Données initiales (fallback si Sheets pas configuré)
 const DEFAULT_CONTACTS = [
@@ -1086,26 +975,7 @@ const today = new Date(); today.setHours(0,0,0,0);
 //  AUTH
 // ════════════════════════════════════════════════════════════
 
-function doLogin() {
-  const pw = document.getElementById('login-pw').value;
-  if (pw === CONFIG.PASSWORD) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-    sessionStorage.setItem('crm_auth', '1');
-    initApp();
-  } else {
-    const err = document.getElementById('login-error');
-    err.style.display = 'block';
-    setTimeout(() => err.style.display = 'none', 2500);
-  }
-}
 
-function doLogout() {
-  sessionStorage.removeItem('crm_auth');
-  document.getElementById('app').classList.remove('visible');
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-pw').value = '';
-}
 
 // ════════════════════════════════════════════════════════════
 //  GOOGLE SHEETS API
@@ -1127,18 +997,13 @@ function setLoading(show, text='') {
 }
 
 function rowToArray(c) {
-  return [c.id, c.company, c.specialite, c.sector, c.location,
+  return [c.id, c.company, '', c.sector, c.location,
           c.contact, c.phone, c.email, c.site, c.status,
-          c.dateJ, JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]),
-          JSON.stringify(c.seqDone||[]), JSON.stringify(c.emails||[]), ''];
+          '', JSON.stringify(c.notes), JSON.stringify(c.linkedin||[]),
+          '[]', JSON.stringify(c.emails||[]), ''];
 }
 
-// Bascule automatiquement les statuts selon la date J
-function autoUpgradeStatuses() {
-  // Les statuts sont maintenant gérés par Apps Script côté envoi.
-  // Ici on met juste à jour l'affichage sans toucher aux contacts en séquence active.
-  // Le seul upgrade CRM-side : si noreply manuel reste cohérent.
-}
+function autoUpgradeStatuses() {}
 
 async function syncFromSheets() {
   if (!CONFIG.WEBHOOK) { renderAll(); return; }
@@ -1220,11 +1085,7 @@ function initApp() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('crm_auth') === '1') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-    initApp();
-  }
+  initApp();
 
   // Délégation d'événements pour le picker de statut
   document.getElementById('panel-status-picker').addEventListener('click', e => {
@@ -1248,7 +1109,8 @@ function getFiltered(searchId) {
   const q = (document.getElementById(searchId||'search-pipeline')||{}).value?.toLowerCase()||'';
   return contacts.filter(c => {
     if (currentSector && c.sector !== currentSector) return false;
-    if (currentFilter !== 'all' && c.status !== currentFilter) return false;
+    if (currentFilter === 'contact' && !IN_CONTACT.includes(c.status)) return false;
+    if (currentFilter !== 'all' && currentFilter !== 'contact' && c.status !== currentFilter) return false;
     if (q && ![c.company, c.sector, c.specialite, c.location, c.contact].some(f => (f||'').toLowerCase().includes(q))) return false;
     return true;
   });
@@ -1279,7 +1141,7 @@ function renderTable() {
     return;
   }
   tbody.innerHTML = data.map(c => {
-    const st = STATUSES.find(s=>s.key===c.status)||STATUSES[0];
+    const st = resolveStatusDisplay(c.status);
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
     const na = getNextAction(c);
     return `<tr onclick="openPanel(${c.id})">
@@ -1301,7 +1163,7 @@ function renderTable2() {
   if (!tbody) return;
   const data = getFiltered('search-contacts');
   tbody.innerHTML = data.map(c => {
-    const st = STATUSES.find(s=>s.key===c.status)||STATUSES[0];
+    const st = resolveStatusDisplay(c.status);
     const sc = SECTOR_CLS[c.sector]||'sector-elec';
     const emails = c.emails || [];
     const firstNamed = emails.find(e=>e.nom||e.prenom);
@@ -1327,7 +1189,6 @@ function renderTable2() {
 
 function updateStats() {
   document.getElementById('stat-total').textContent    = contacts.length;
-  document.getElementById('stat-followup').textContent = contacts.filter(c=>c.status==='followup').length;
   document.getElementById('stat-replied').textContent  = contacts.filter(c=>['replied','negative','pilote'].includes(c.status)).length;
   document.getElementById('stat-pilote').textContent   = contacts.filter(c=>c.status==='pilote').length;
 
@@ -1338,7 +1199,7 @@ function updateStats() {
     return (c.status==='sent' && d>=5) || (c.status==='followup' && d>=11);
   });
   const banner = document.getElementById('urgent-banner');
-  const txt    = document.getElementById('urgent-text');
+  const txt    = document.getElementById('urgent-text') || {};
   if (urgent.length > 0) {
     const j6  = urgent.filter(c=>c.status==='sent').length;
     const j12 = urgent.filter(c=>c.status==='followup').length;
@@ -1354,7 +1215,7 @@ function updateStats() {
 
 // ── KANBAN ──────────────────────────────────────────────────
 function renderKanban() {
-  document.getElementById('kanban-board').innerHTML = STATUSES.map(s => {
+  (document.getElementById('kanban-board')||{}).innerHTML = STATUSES.map(s => {
     const cards = contacts.filter(c=>c.status===s.key);
     return `<div class="kanban-col">
       <div class="kanban-header"><span class="kanban-title">${s.label}</span><span class="kanban-count">${cards.length}</span></div>
@@ -1370,37 +1231,7 @@ function renderKanban() {
 }
 
 // ── AGENDA ──────────────────────────────────────────────────
-function renderAgenda() {
-  const list = document.getElementById('agenda-list');
-  const actions = [];
-  contacts.forEach(c => {
-    if (!c.dateJ) { if (c.status==='todo') actions.push({date:today,label:'Envoyer J — Premier mail',company:c.company,id:c.id,urgent:false,channel:'mail'}); return; }
-    const j = new Date(c.dateJ);
-    SEQ_STEPS.forEach(s => {
-      const d = addDays(j, s.offset);
-      const ds = Math.floor((today-d)/86400000);
-      if (ds>=-7 && ds<=14) actions.push({date:d,label:s.label,company:c.company,id:c.id,urgent:ds>=0&&ds<=2,channel:s.channel});
-    });
-  });
-  actions.sort((a,b)=>a.date-b.date);
-  const groups = {};
-  actions.forEach(a=>{ const k=a.date.toISOString().slice(0,10); if(!groups[k])groups[k]=[]; groups[k].push(a); });
-  list.innerHTML = Object.entries(groups).map(([key,items])=>{
-    const d = new Date(key);
-    const isPast = d<today, isToday = d.toDateString()===today.toDateString();
-    const label = isToday?'Aujourd\'hui':d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-    return `<div class="agenda-date" style="${isToday?'color:var(--amber);border-color:rgba(196,127,0,0.3)':isPast?'opacity:0.5':''}">${label}${isToday?' ← AUJOURD\'HUI':''}</div>
-    ${items.map(a=>`<div class="agenda-item" onclick="openPanel(${a.id})" style="${isPast?'opacity:0.6':''}">
-      <div class="agenda-left"><div class="agenda-day-num">${d.getDate()}</div><div class="agenda-month">${d.toLocaleDateString('fr-FR',{month:'short'})}</div></div>
-      <div class="agenda-divider"></div>
-      <div class="agenda-body"><div class="agenda-action">${a.label}</div><div class="agenda-company">${a.company}</div></div>
-      <div class="agenda-right">
-        <span class="seq-channel ${a.channel==='mail'?'ch-mail':'ch-linkedin'}">${a.channel==='mail'?'Mail':'LinkedIn'}</span>
-        ${a.urgent?'<span style="font-size:10px;color:var(--amber);font-weight:600;">ACTION</span>':''}
-      </div>
-    </div>`).join('')}`;
-  }).join('');
-}
+
 
 // ── PANEL ────────────────────────────────────────────────────
 function openPanel(id) {
@@ -1413,26 +1244,13 @@ function openPanel(id) {
     `<span class="sector-badge ${sc}">${c.sector}</span>` +
     `<span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
 
-  const days = daysSince(c.dateJ);
   const emails = c.emails || [];
-  const nbSansReponse = emails.filter(e=>e.statut==='sans_reponse').length;
-  const autresEmails  = emails.filter(e=>e.statut!=='sans_reponse' && e.statut!=='actif_tunnel');
-
-  // Badge alerte bascule si 3+ mails envoyés sans réponse
-  const seqDoneCount = (c.seqDone||[]).length;
-  const showSwitchAlert = seqDoneCount >= 3 && autresEmails.length > 0 && ['sequence','sent','followup'].includes(c.status);
 
   document.getElementById('panel-info-grid').innerHTML = `
-    <div class="info-item full"><div class="info-label">Spécialité</div><div class="info-value">${c.specialite||'—'}</div></div>
     <div class="info-item"><div class="info-label">Localisation</div><div class="info-value">${c.location||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Date J</div><div class="info-value">${c.dateJ?fmtDate(new Date(c.dateJ))+(days!==null?` (J+${days})`:''): '—'}</div></div>
     <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div></div>
-    <div class="info-item"><div class="info-label">Site</div><div class="info-value">${c.site?`<a href="https://${c.site}" target="_blank">${c.site}</a>`:'—'}</div></div>
     <div class="info-item full">
-      <div class="info-label" style="display:flex;align-items:center;justify-content:space-between;">
-        Contacts & Emails
-        ${showSwitchAlert ? `<span class="switch-alert" onclick="openEmailPicker(${c.id}, true)">💡 Basculer vers un autre email</span>` : ''}
-      </div>
+      <div class="info-label">Contacts & Emails</div>
       <div style="margin-top:6px;">
         ${emails.length === 0 ? '<span style="color:var(--text3);font-size:12px;">Aucun email — modifier la fiche</span>' :
           emails.map((e,i) => {
@@ -1458,22 +1276,7 @@ function openPanel(id) {
 
   // Séquence cochable manuellement
   if (!c.seqDone) c.seqDone = [];
-  document.getElementById('panel-sequence').innerHTML = `<div class="sequence-title">Séquence 12 jours — to-do list</div>`+SEQ_STEPS.map((step,i)=>{
-    const done = c.seqDone.includes(i);
-    const j2 = c.dateJ?new Date(c.dateJ):null;
-    const stepDate = j2?addDays(j2,step.offset):null;
-    return `<div class="seq-item" style="${done?'opacity:0.55':''}">
-      <div class="seq-check ${done?'done':'upcoming'}" onclick="toggleSeq(${c.id},${i})" style="cursor:pointer;flex-shrink:0;">
-        ${done?'✓':''}
-      </div>
-      <div class="seq-info">
-        <div class="seq-day">${step.day}</div>
-        <div class="seq-action" style="${done?'text-decoration:line-through;':''}">${step.label}</div>
-        ${stepDate?`<div class="seq-date">${fmtDate(stepDate)}</div>`:''}
-      </div>
-      <span class="seq-channel ${step.channel==='mail'?'ch-mail':'ch-linkedin'}">${step.channel==='mail'?'Mail':'Li'}</span>
-    </div>`;
-  }).join('');
+  // Séquence gérée par Apps Script
   document.getElementById('edit-form-block').style.display = 'none';
   document.getElementById('view-info-block').style.display = 'block';
   const btn = document.getElementById('edit-toggle-btn');
@@ -1510,12 +1313,9 @@ function toggleEditMode() {
   if (form.style.display!=='none') { cancelEdit(); return; }
   const c = selectedContact;
   document.getElementById('edit-company').value    = c.company||'';
-  document.getElementById('edit-specialite').value = c.specialite||'';
   document.getElementById('edit-sector').value     = c.sector||'Électronique industrielle';
   document.getElementById('edit-location').value   = c.location||'';
   document.getElementById('edit-phone').value      = c.phone||'';
-  document.getElementById('edit-site').value       = c.site||'';
-  document.getElementById('edit-dateJ').value      = c.dateJ||'';
   renderEditEmails(c.emails||[]);
   form.style.display='block'; view.style.display='none';
   btn.textContent='✕ Annuler';
@@ -1533,12 +1333,12 @@ function saveEdit() {
   if (!selectedContact) return;
   const c = selectedContact;
   c.company    = document.getElementById('edit-company').value.trim()||c.company;
-  c.specialite = document.getElementById('edit-specialite').value.trim();
+  c.specialite = '';
   c.sector     = document.getElementById('edit-sector').value;
   c.location   = document.getElementById('edit-location').value.trim();
   c.phone      = document.getElementById('edit-phone').value.trim();
-  c.site       = document.getElementById('edit-site').value.trim();
-  c.dateJ      = document.getElementById('edit-dateJ').value||'';
+  c.site = '';
+  c.dateJ = '';
   // Collecte les emails depuis le formulaire
   c.emails = collectEmailsFromForm();
   // Rétrocompatibilité : premier email nommé → contact, premier email → email
@@ -1594,10 +1394,16 @@ function setStatusFilter(f) {
   renderTable();
 }
 
+// Alias : sent et followup → badge "En contact"
+function resolveStatusDisplay(status) {
+  if (IN_CONTACT.includes(status)) return STATUSES.find(s=>s.key==='sequence');
+  return STATUSES.find(s=>s.key===status) || STATUSES[0];
+}
+
 function filterSector(s) { currentSector=s; showPage('pipeline'); }
 
 // ── MODAL ───────────────────────────────────────────────────
-function openModal() { document.getElementById('modal-overlay').classList.add('open'); document.getElementById('f-date').value=fmtDateInput(today); }
+function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
 function addContact() {
@@ -1605,15 +1411,15 @@ function addContact() {
   if (!company) return alert('Nom de l\'entreprise requis');
   const c = {
     id:nextId++, company,
-    specialite: document.getElementById('f-specialite').value.trim(),
+    specialite: '',
     sector:     document.getElementById('f-sector').value,
     location:   document.getElementById('f-location').value.trim(),
     contact:    document.getElementById('f-contact').value.trim(),
     phone:      document.getElementById('f-phone').value.trim(),
     email:      document.getElementById('f-email').value.trim(),
-    site:       document.getElementById('f-site').value.trim(),
+    site: '',
     status:'todo',
-    dateJ: document.getElementById('f-date').value||'',
+    dateJ: '',
     notes:[],
   };
   contacts.push(c);
@@ -1783,15 +1589,15 @@ function renderAnalyses() {
   const pilotes = contacts.filter(c=>c.status==='pilote').length;
   const contacted = contacts.filter(c=>c.status!=='todo').length;
 
-  document.getElementById('an-taux').textContent    = contacted ? Math.round(replied/contacted*100)+'%' : '—';
-  document.getElementById('an-taux-sub').textContent = `${replied} réponses / ${contacted} contactés`;
-  document.getElementById('an-actifs').textContent  = replied+' / '+total;
-  document.getElementById('an-pilotes').textContent = pilotes + ' / 3';
+  (document.getElementById('an-taux')||{}).textContent    = contacted ? Math.round(replied/contacted*100)+'%' : '—';
+  (document.getElementById('an-taux-sub')||{}).textContent = `${replied} réponses / ${contacted} contactés`;
+  (document.getElementById('an-actifs')||{}).textContent  = replied+' / '+total;
+  (document.getElementById('an-pilotes')||{}).textContent = pilotes + ' / 3';
 
   // ── Entonnoir par secteur ──
   const sectors = ['Électronique industrielle','Médical','Aéronautique'];
   const sColors = ['#003d61','#1a8a5a','#d4a020'];
-  document.getElementById('an-funnel').innerHTML = sectors.map((s,i)=>{
+  (document.getElementById('an-funnel')||{}).innerHTML = sectors.map((s,i)=>{
     const sc = contacts.filter(c=>c.sector===s||c.sector===s+' / Défense');
     const ct = sc.filter(c=>c.status!=='todo').length;
     const rep= sc.filter(c=>['replied','pilote'].includes(c.status)).length;
@@ -1811,7 +1617,7 @@ function renderAnalyses() {
   }).join('');
 
   // ── Répartition statuts ──
-  document.getElementById('an-statuts').innerHTML = STATUSES.map(s=>{
+  (document.getElementById('an-statuts')||{}).innerHTML = STATUSES.map(s=>{
     const n = contacts.filter(c=>c.status===s.key).length;
     const pct = total ? Math.round(n/total*100) : 0;
     return `
@@ -1833,7 +1639,7 @@ function renderAnalyses() {
   const liAccepte  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.accepte).length,0);
   const liMessage  = withLi.reduce((a,c)=>a+c.linkedin.filter(p=>p.message).length,0);
   const liTotal    = withLi.reduce((a,c)=>a+c.linkedin.length,0);
-  document.getElementById('an-linkedin').innerHTML = liTotal===0
+  (document.getElementById('an-linkedin')||{}).innerHTML = liTotal===0
     ? '<div style="color:var(--text3);font-size:12px;">Aucune donnée LinkedIn encore — ajoute des contacts LinkedIn dans les fiches.</div>'
     : [
         {label:'Profils visités',  val:liVisited,  color:'#003d61'},
@@ -1851,7 +1657,7 @@ function renderAnalyses() {
 
   // ── Liste répondants ──
   const rep = contacts.filter(c=>['replied','pilote'].includes(c.status));
-  document.getElementById('an-repondants').innerHTML = rep.length===0
+  (document.getElementById('an-repondants')||{}).innerHTML = rep.length===0
     ? `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">Aucune réponse encore</div></div></td></tr>`
     : rep.map(c=>{
         const st=STATUSES.find(s=>s.key===c.status)||STATUSES[0];
@@ -2209,7 +2015,7 @@ function deleteStep(i) {
 // ── Rendu tunnel dans le panel ───────────────────────────────
 function renderSequencePanel(c) {
   const seqBtnGroup    = document.getElementById('seq-btn-group');
-  const inSequence     = ['sequence','sent','followup'].includes(c.status);
+  const inSequence     = IN_CONTACT.includes(c.status);
   const isTerminal     = ['replied','negative','pilote','noreply'].includes(c.status);
   const hasMultiEmails = (c.emails||[]).filter(e=>e.email).length > 1;
 
