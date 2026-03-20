@@ -1283,7 +1283,6 @@ function openPanel(id) {
   btn.textContent='✏ Modifier'; btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
   document.getElementById('note-input').value='';
   renderNotes();
-  renderLinkedin();
   renderSequencePanel(c);
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('side-panel').classList.add('open');
@@ -1376,7 +1375,7 @@ function saveNote() {
 function renderNotes() {
   const list=document.getElementById('saved-notes-list');
   if (!selectedContact||!selectedContact.notes.length) {
-    list.innerHTML='<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucune note — utilise les boutons ci-dessus.</div>';
+    list.innerHTML='<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucune note pour l\'instant.</div>';
     return;
   }
   list.innerHTML = selectedContact.notes.map(n=>`
@@ -1494,85 +1493,6 @@ function sortBy(key) {
 // ════════════════════════════════════════════════════════════
 //  LINKEDIN
 // ════════════════════════════════════════════════════════════
-
-// linkedin stocké dans c.linkedin = [ {name, role, visite, demande, accepte, message}, ... ]
-
-function getLi(c) {
-  if (!c.linkedin) c.linkedin = [];
-  return c.linkedin;
-}
-
-function saveLi(c) {
-  // Sérialise linkedin dans notes pour le Sheet (champ dédié si tu veux, ici on réutilise une clé séparée)
-  saveRowToSheets(c);
-}
-
-function renderLinkedin() {
-  if (!selectedContact) return;
-  const c = selectedContact;
-  const people = getLi(c);
-  const el = document.getElementById('panel-linkedin');
-
-  const rows = people.map((p,i) => {
-    const initials = p.name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
-    return `
-    <div class="li-person">
-      <div class="li-avatar">${initials||'?'}</div>
-      <div class="li-info">
-        <div class="li-name">${p.name}</div>
-        <div class="li-role">${p.role||'—'}</div>
-      </div>
-      <div class="li-actions">
-        <button class="li-pill ${p.visite?'active-visite':''}"   onclick="toggleLi(${c.id},${i},'visite')"  title="Profil visité">👁 Visité</button>
-        <button class="li-pill ${p.demande?'active-demande':''}" onclick="toggleLi(${c.id},${i},'demande')" title="Demande envoyée">+ Demande</button>
-        <button class="li-pill ${p.accepte?'active-accepte':''}" onclick="toggleLi(${c.id},${i},'accepte')" title="Connexion acceptée">✓ Accepté</button>
-        <button class="li-pill ${p.message?'active-message':''}" onclick="toggleLi(${c.id},${i},'message')" title="Message envoyé">✉ Messagé</button>
-        <button class="li-delete" onclick="deleteLiPerson(${c.id},${i})" title="Supprimer">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = `
-    <div class="li-header">
-      <div class="li-title"><div class="li-logo">in</div> Contacts LinkedIn</div>
-      <span style="font-size:11px;color:var(--text3);">${people.length} contact${people.length>1?'s':''}</span>
-    </div>
-    ${rows || '<div style="padding:12px 14px;font-size:12px;color:var(--text3);">Aucun contact LinkedIn — ajoute-en ci-dessous.</div>'}
-    <div class="li-add-row">
-      <input class="li-add-input" id="li-name-input" placeholder="Nom du contact (ex: Florence Bertrand)" onkeydown="if(event.key==='Enter')addLiPerson(${c.id})">
-      <input class="li-add-input" id="li-role-input" placeholder="Poste (ex: Dir. Ops)" style="max-width:160px;" onkeydown="if(event.key==='Enter')addLiPerson(${c.id})">
-      <button class="btn btn-primary btn-sm" onclick="addLiPerson(${c.id})">+ Ajouter</button>
-    </div>`;
-}
-
-function addLiPerson(id) {
-  const c = contacts.find(x=>x.id===id);
-  if (!c) return;
-  const name = document.getElementById('li-name-input').value.trim();
-  if (!name) return;
-  const role = document.getElementById('li-role-input').value.trim();
-  getLi(c).push({ name, role, visite:false, demande:false, accepte:false, message:false });
-  saveLi(c);
-  renderLinkedin();
-}
-
-function toggleLi(id, idx, field) {
-  const c = contacts.find(x=>x.id===id);
-  if (!c) return;
-  const p = getLi(c)[idx];
-  if (!p) return;
-  p[field] = !p[field];
-  saveLi(c);
-  renderLinkedin();
-}
-
-function deleteLiPerson(id, idx) {
-  const c = contacts.find(x=>x.id===id);
-  if (!c) return;
-  getLi(c).splice(idx,1);
-  saveLi(c);
-  renderLinkedin();
-}
 
 // ════════════════════════════════════════════════════════════
 //  ANALYSES
@@ -2042,22 +1962,17 @@ function renderSequencePanel(c) {
     return;
   }
 
-  const etapes = c.seqDone || [];
   document.getElementById('panel-sequence').innerHTML =
     `<div class="sequence-title">Étapes — ${c.sector}</div>` +
-    steps.map((step, i) => {
-      const done = etapes.includes(i);
-      return `<div class="seq-item" style="${done?'opacity:0.55':''}">
-        <div class="seq-check ${done?'done':'upcoming'}" onclick="toggleSeq(${c.id},${i})" style="cursor:pointer;">
-          ${done?'✓':''}
-        </div>
+    steps.map((step, i) => `
+      <div class="seq-item">
+        <div class="seq-check upcoming"></div>
         <div class="seq-info">
           <div class="seq-day">J+${step.jour}</div>
-          <div class="seq-action" style="${done?'text-decoration:line-through;':''}">${step.objet||'(pas d\'objet)'}</div>
+          <div class="seq-action">${step.objet||'(pas d\'objet)'}</div>
         </div>
         <span class="seq-channel ch-mail">Mail</span>
-      </div>`;
-    }).join('');
+      </div>`).join('');
 }
 
 async function activateSequence(contactId) {
