@@ -1018,57 +1018,59 @@ function updateStats() {
   }
 }
 
-function renderKanban() {
-  (document.getElementById('kanban-board')||{}).innerHTML = STATUSES.map(s => {
-    const cards = contacts.filter(c=>c.status===s.key);
-    return `<div class="kanban-col">
-      <div class="kanban-header"><span class="kanban-title">${s.label}</span><span class="kanban-count">${cards.length}</span></div>
-      <div class="kanban-cards">
-        ${cards.length===0?'<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px 0;">Vide</div>':''}
-        ${cards.map(c=>`<div class="kanban-card" onclick="openPanel(${c.id})">
-          <div class="kanban-card-name">${c.company}</div>
-          <div class="kanban-card-meta">${c.sector.split(' ')[0]} · ${c.location||'?'}</div>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
+function openPanel(id) {
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
 
-emails.map((e, i) => {
-  const label = e.nom ? `${e.prenom||''} ${e.nom}`.trim() : (e.label||'Générique');
-  const statut = e.statut || 'actif';
-  const isTunnel = e.statut === 'actif_tunnel';
-  const isBounce = e.statut === 'bounce';
-  return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);${isBounce?'opacity:0.6':''}">
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:12px;font-weight:600;color:var(--text);">
-        ${label}${e.poste?` <span style="color:var(--text3);font-weight:400;">— ${e.poste}</span>`:''}
-        ${isTunnel ? `<span class="email-tag actif">▶ Tunnel actif</span>` : ''}
-        ${isBounce ? `<span class="email-tag bounce">⚠ Bounce</span>` : ''}
-      </div>
-      <div style="font-size:11px;color:${statut==='sans_reponse'?'var(--red)':statut==='repondu'?'var(--green)':'var(--text2)'};">
-        ${e.email}
-        ${statut==='sans_reponse' ? `<span style="color:var(--red)">— Sans réponse</span>` : ''}
-        ${statut==='repondu'      ? `<span style="color:var(--green)">— A répondu ✓</span>` : ''}
-      </div>
-    </div>
-    ${!isBounce ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="font-size:16px;text-decoration:none;opacity:0.6;" title="Envoyer un email">✉</a>` : ''}
-    <button onclick="event.stopPropagation();openBounceModal(${c.id},${i})"
-      style="background:var(--red-dim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:11px;font-weight:600;${isBounce?'opacity:0.5;cursor:default;pointer-events:none;':''}">
-      ⚠ Bounce
-    </button>
-  </div>`;
-}).join('')
+  selectedContact = c;
+  const emails = c.emails || [];
 
-  document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s=>`
-    <button class="status-option ${c.status===s.key?'selected':''}" data-action="setstatus" data-key="${s.key}">${s.label}</button>`).join('');
+  document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s => `
+    <button class="status-option ${c.status === s.key ? 'selected' : ''}" data-action="setstatus" data-key="${s.key}">${s.label}</button>
+  `).join('');
+
+  const emailsContainer = document.getElementById('panel-emails');
+  if (emailsContainer) {
+    emailsContainer.innerHTML = emails.map((e, i) => {
+      const label = e.nom ? `${e.prenom || ''} ${e.nom}`.trim() : (e.label || 'Générique');
+      const statut = e.statut || 'actif';
+      const isTunnel = e.statut === 'actif_tunnel';
+      const isBounce = e.statut === 'bounce';
+
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);${isBounce ? 'opacity:0.6' : ''}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);">
+            ${label}${e.poste ? ` <span style="color:var(--text3);font-weight:400;">— ${e.poste}</span>` : ''}
+            ${isTunnel ? `<span class="email-tag actif">▶ Tunnel actif</span>` : ''}
+            ${isBounce ? `<span class="email-tag bounce">⚠ Bounce</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:${statut === 'sans_reponse' ? 'var(--red)' : statut === 'repondu' ? 'var(--green)' : 'var(--text2)'};">
+            ${e.email}
+            ${statut === 'sans_reponse' ? `<span style="color:var(--red)">— Sans réponse</span>` : ''}
+            ${statut === 'repondu' ? `<span style="color:var(--green)">— A répondu ✓</span>` : ''}
+          </div>
+        </div>
+        ${!isBounce ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="font-size:16px;text-decoration:none;opacity:0.6;" title="Envoyer un email">✉</a>` : ''}
+        <button onclick="event.stopPropagation();openBounceModal(${c.id},${i})"
+          style="background:var(--red-dim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:11px;font-weight:600;${isBounce ? 'opacity:0.5;cursor:default;pointer-events:none;' : ''}">
+          ⚠ Bounce
+        </button>
+      </div>`;
+    }).join('');
+  }
 
   if (!c.seqDone) c.seqDone = [];
+
   document.getElementById('edit-form-block').style.display = 'none';
   document.getElementById('view-info-block').style.display = 'block';
+
   const btn = document.getElementById('edit-toggle-btn');
-  btn.textContent='✏ Modifier'; btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
-  document.getElementById('note-input').value='';
+  btn.textContent = '✏ Modifier';
+  btn.style.background = '';
+  btn.style.color = '';
+  btn.style.borderColor = '';
+
+  document.getElementById('note-input').value = '';
   renderNotes();
   renderSequencePanel(c);
   document.getElementById('panel-overlay').classList.add('open');
