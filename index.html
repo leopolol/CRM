@@ -467,6 +467,7 @@ const CONFIG = {
 .email-tag.sans-reponse { background:var(--red-dim); color:var(--red); }
 .email-tag.repondu      { background:var(--green-dim); color:var(--green); }
 .email-tag.generique    { background:var(--bg4); color:var(--text2); }
+.email-tag.bounce { background: rgba(192,57,43,0.15); color: #c0392b; border: 1px solid rgba(192,57,43,0.3); }
 
 .canon-contact {
   display:flex; align-items:center; gap:12px; padding:10px 14px;
@@ -1033,43 +1034,31 @@ function renderKanban() {
   }).join('');
 }
 
-function openPanel(id) {
-  selectedContact = contacts.find(c=>c.id===id);
-  if (!selectedContact) return;
-  const c = selectedContact;
-  document.getElementById('panel-company-name').textContent = c.company;
-  const sc = SECTOR_CLS[c.sector]||'sector-elec';
-  document.getElementById('panel-meta').innerHTML =
-    `<span class="sector-badge ${sc}">${c.sector}</span>` +
-    `<span style="color:rgba(255,255,255,0.5);font-size:12px;">${c.location||''}</span>`;
-
-  const emails = c.emails || [];
-
-  document.getElementById('panel-info-grid').innerHTML = `
-    <div class="info-item"><div class="info-label">Localisation</div><div class="info-value">${c.location||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">${c.phone?`<a href="tel:${c.phone}">${c.phone}</a>`:'—'}</div></div>
-    <div class="info-item full">
-      <div class="info-label">Contacts & Emails</div>
-      <div style="margin-top:6px;">
-        ${emails.length === 0 ? '<span style="color:var(--text3);font-size:12px;">Aucun email — modifier la fiche</span>' :
-          emails.map((e,i) => {
-            const label = e.nom ? `${e.prenom||''} ${e.nom}`.trim() : (e.label||'Générique');
-            const statut = e.statut||'actif';
-            const isTunnel = e.statut === 'actif_tunnel';
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:600;color:var(--text);">${label}${e.poste?` <span style="color:var(--text3);font-weight:400;">— ${e.poste}</span>`:''}${isTunnel?` <span class="email-tag actif">▶ Tunnel actif</span>`:''}</div>
-                <div style="font-size:11px;color:${statut==='sans_reponse'?'var(--red)':statut==='repondu'?'var(--green)':'var(--text2)'};">
-                  ${e.email}
-                  ${statut==='sans_reponse'?` <span style="color:var(--red)">— Sans réponse</span>`:''}
-                  ${statut==='repondu'?` <span style="color:var(--green)">— A répondu ✓</span>`:''}
-                </div>
-              </div>
-              <a href="mailto:${e.email}" onclick="event.stopPropagation()" style="font-size:16px;text-decoration:none;opacity:0.6;" title="Envoyer un email">✉</a>
-            </div>`;
-          }).join('')}
+emails.map((e, i) => {
+  const label = e.nom ? `${e.prenom||''} ${e.nom}`.trim() : (e.label||'Générique');
+  const statut = e.statut || 'actif';
+  const isTunnel = e.statut === 'actif_tunnel';
+  const isBounce = e.statut === 'bounce';
+  return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);${isBounce?'opacity:0.6':''}">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:600;color:var(--text);">
+        ${label}${e.poste?` <span style="color:var(--text3);font-weight:400;">— ${e.poste}</span>`:''}
+        ${isTunnel ? `<span class="email-tag actif">▶ Tunnel actif</span>` : ''}
+        ${isBounce ? `<span class="email-tag bounce">⚠ Bounce</span>` : ''}
       </div>
-    </div>`;
+      <div style="font-size:11px;color:${statut==='sans_reponse'?'var(--red)':statut==='repondu'?'var(--green)':'var(--text2)'};">
+        ${e.email}
+        ${statut==='sans_reponse' ? `<span style="color:var(--red)">— Sans réponse</span>` : ''}
+        ${statut==='repondu'      ? `<span style="color:var(--green)">— A répondu ✓</span>` : ''}
+      </div>
+    </div>
+    ${!isBounce ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="font-size:16px;text-decoration:none;opacity:0.6;" title="Envoyer un email">✉</a>` : ''}
+    <button onclick="event.stopPropagation();openBounceModal(${c.id},${i})"
+      style="background:var(--red-dim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:11px;font-weight:600;${isBounce?'opacity:0.5;cursor:default;pointer-events:none;':''}">
+      ⚠ Bounce
+    </button>
+  </div>`;
+}).join('')
 
   document.getElementById('panel-status-picker').innerHTML = STATUSES.map(s=>`
     <button class="status-option ${c.status===s.key?'selected':''}" data-action="setstatus" data-key="${s.key}">${s.label}</button>`).join('');
@@ -1815,8 +1804,104 @@ async function confirmCanon() {
     alert('Erreur lors du lancement du canon : ' + err.message);
   }
 }
-</script>
+function openBounceModal(contactId, emailIdx) {
+  const c = contacts.find(x => x.id === contactId);
+  if (!c || !c.emails[emailIdx]) return;
+  const e = c.emails[emailIdx];
+  document.getElementById('bounce-email-label').textContent = e.email;
+  document.getElementById('bounce-new-address').value = '';
+  document.getElementById('bounce-overlay').dataset.contactId = contactId;
+  document.getElementById('bounce-overlay').dataset.emailIdx  = emailIdx;
+  document.getElementById('bounce-overlay').classList.add('open');
+}
 
+function closeBounceModal() {
+  document.getElementById('bounce-overlay').classList.remove('open');
+}
+
+async function confirmBounce(action) {
+  const overlay   = document.getElementById('bounce-overlay');
+  const contactId = parseInt(overlay.dataset.contactId);
+  const emailIdx  = parseInt(overlay.dataset.emailIdx);
+  const c = contacts.find(x => x.id === contactId);
+  if (!c) return;
+
+  const bouncedEmail = c.emails[emailIdx];
+  bouncedEmail.statut = 'bounce';
+
+  closeBounceModal();
+
+  if (action === 'correct') {
+    const newAddr = document.getElementById('bounce-new-address').value.trim();
+    if (!newAddr || !newAddr.includes('@')) return alert('Adresse email invalide.');
+    // Supprime l'ancienne séquence
+    if (CONFIG.WEBHOOK) {
+      await fetch(CONFIG.WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', id: c.id, sheet: 'SEQUENCES' })
+      }).catch(console.error);
+    }
+    // Met à jour l'adresse
+    bouncedEmail.email  = newAddr;
+    bouncedEmail.statut = 'actif';
+    // Relance le tunnel dès demain (étape 0)
+    await doActivateSequence(c, bouncedEmail);
+
+  } else if (action === 'next') {
+    // Supprime l'ancienne séquence
+    if (CONFIG.WEBHOOK) {
+      await fetch(CONFIG.WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', id: c.id, sheet: 'SEQUENCES' })
+      }).catch(console.error);
+    }
+    // Trouve le prochain email disponible
+    const next = c.emails.find((e, i) => i !== emailIdx && e.email && !['bounce','sans_reponse'].includes(e.statut));
+    if (!next) {
+      saveRowToSheets(c);
+      openPanel(c.id);
+      renderAll();
+      return alert('Aucun autre email disponible sur cette fiche.');
+    }
+    await doActivateSequence(c, next);
+  }
+}
+</script>
+<!-- BOUNCE MODAL -->
+<div class="email-picker-overlay" id="bounce-overlay">
+  <div class="email-picker" style="width:420px;">
+    <div class="email-picker-title">⚠ Mail bounced</div>
+    <div class="email-picker-sub">Adresse invalide : <strong id="bounce-email-label"></strong></div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">✏ Corriger l'adresse et relancer</div>
+        <input class="form-input" id="bounce-new-address" type="email" placeholder="nouvelle@adresse.com" style="margin-bottom:8px;">
+        <button class="btn btn-primary btn-sm" onclick="confirmBounce('correct')" style="width:100%;justify-content:center;">
+          Corriger et relancer dès demain
+        </button>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--text3);">— ou —</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">⏭ Passer au contact suivant</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Le prochain email disponible dans la fiche prend le relais dès demain.</div>
+        <button class="btn btn-sm" onclick="confirmBounce('next')" style="width:100%;justify-content:center;background:var(--amber-dim);border-color:var(--amber);color:var(--amber);">
+          Passer au suivant
+        </button>
+      </div>
+
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-sm" onclick="closeBounceModal()">Annuler</button>
+    </div>
+  </div>
+</div>
 <!-- EMAIL PICKER MODAL -->
 <div class="email-picker-overlay" id="email-picker-overlay">
   <div class="email-picker">
